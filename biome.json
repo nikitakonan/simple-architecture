@@ -50,7 +50,7 @@
   },
   "overrides": [
     {
-      "includes": ["*.config.ts"],
+      "includes": ["*.config.ts", "server/*.config.ts", "server/src/index.ts"],
       "linter": {
         "rules": {
           "style": { "noDefaultExport": "off" }
@@ -214,6 +214,33 @@
                   {
                     "group": ["**/api/**", "**/api", "!**/api/types"],
                     "message": "Tasks get API implementations as arguments. Import only types from api/types."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["server/src/tasks/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "hono": "Tasks are plain TypeScript. Keep HTTP in app.ts."
+                },
+                "patterns": [
+                  {
+                    "group": ["hono/**", "../app", "../cache/**", "../index"],
+                    "message": "Tasks get their dependencies as arguments."
+                  },
+                  {
+                    "group": ["../tvmaze/**", "!../tvmaze/types"],
+                    "message": "Tasks import only types from tvmaze/types."
                   }
                 ]
               }

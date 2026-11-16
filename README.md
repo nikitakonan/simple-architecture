@@ -86,6 +86,33 @@ src/
     setup.ts              # Vitest setup: jest-dom matchers, cleanup
 ```
 
+## API server (`server/`)
+
+A small backend on [Cloudflare Workers](https://workers.cloudflare.com/) (free tier) built with [Hono](https://hono.dev/). It calls TVmaze and does the genre filtering and pagination on the server. The frontend doesn't use it yet; switching over is the next step.
+
+```
+GET /shows?q=<query>&genre=<genre>&page=<page>
+→ { query, genre, genres, totalCount, matchCount, page, pageCount, pageSize, firstIndex, items }
+```
+
+- `q` is required. `genre` and `page` (default 1) are optional, and a page past the end is clamped to the last page.
+- `genres` is counted over all results for `q`, not just the filtered ones, so the chips stay visible while a genre is selected.
+- Errors come back as `{ error }` with status 400 (invalid parameters), 404 or 502 (TVmaze failed).
+- TVmaze responses are cached in memory for 5 minutes, so changing the page or genre usually doesn't call TVmaze again. Responses also send `Cache-Control: max-age=300`.
+- CORS is limited to the origins in `ALLOWED_ORIGINS` in `server/wrangler.jsonc`.
+
+The response types are in `server/src/contract.ts`. The code follows the same split as the frontend: `app.ts` handles HTTP, `tasks/` holds plain TypeScript business logic that gets its dependencies as arguments, and `tvmaze/` and `cache/` hold the concrete implementations, which are wired together in `index.ts`.
+
+```sh
+cd server
+npm install
+npm run dev        # http://localhost:8787/shows?q=girls
+npm run test:run
+npm run typecheck
+```
+
+Pushing changes under `server/` to `main` deploys the Worker through `.github/workflows/deploy-api.yml`. This needs two repository secrets: `CLOUDFLARE_API_TOKEN` (a token created from the "Edit Cloudflare Workers" template) and `CLOUDFLARE_ACCOUNT_ID`.
+
 ## Conventions
 
 - One component per file. Every component, even a small single-use one, is its own folder: `index.tsx` (the view), `Component.module.css` and `Component.test.tsx`.

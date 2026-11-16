@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm test`: run Vitest in watch mode
 - `npm run test:run`: run all tests once
 - `npx vitest run src/pages/HomePage/HomePage.test.tsx`: run a single test file (add `-t "<name>"` to filter by test name)
+- `cd server && npm run dev | test:run | typecheck`: the API Worker in `server/` has its own package, tests (Node environment, explicit `vitest` imports) and tsconfig; root `npm run check` lints it too
 
 ## Stack and setup
 
@@ -38,4 +39,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **UX is graded:** debounce input instead of sending a request on every keystroke, cancel in-flight requests when the query changes (for example with `AbortController`), and handle loading, error, and empty states explicitly.
 - **Stretch goal:** implement the data-fetching layer by hand, without `useQuery` (TanStack Query). Don't add react-query unless the user asks for it.
 - **Design is free-form:** there is no mockup, and a polished, original UI is encouraged.
+- **Backend:** `server/` is a Cloudflare Worker (Hono) that serves `GET /shows?q=&genre=&page=`: it calls TVmaze and does the genre filtering and pagination. Its response types are in `server/src/contract.ts`. Inside it, `app.ts` is HTTP only, `tasks/` holds plain TS that receives its dependencies as arguments (enforced by Biome), and `index.ts` wires in the real implementations.
 - The repo is named "simple-architecture", so keep a clear separation between the API client, the data-fetching/state logic (hooks), and presentational components.

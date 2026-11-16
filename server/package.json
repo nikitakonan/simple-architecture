@@ -1,0 +1,22 @@
+{
+  "name": "tv-shows-explorer-api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.13.19"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261116.1",
+    "typescript": "~7.0.2",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.163.0"
+  }
+}
