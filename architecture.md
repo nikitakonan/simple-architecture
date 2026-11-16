@@ -227,7 +227,8 @@ export function usePresenter() {
     genres: data?.genres ?? [],
     selectedGenre: genre,
     selectGenre,
-    resultsLabel: describeResults({ // task: "4 Drama of 12 shows"
+    // task: "4 Drama of 12 shows"
+    resultsLabel: describeResults({
       total: data?.totalCount ?? 0,
       filtered: data?.matchCount ?? 0,
       genre: data?.genre ?? null,
