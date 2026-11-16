@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { searchShows } from '../api/tvmaze'
 import type { Show } from '../api/types'
+import { findShows } from '../tasks/findShows'
 
 export type SearchStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -44,12 +45,12 @@ export function useShowSearch(query: string) {
     const controller = new AbortController()
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
 
-    searchShows(trimmed, controller.signal)
-      .then((results) => {
+    findShows(trimmed, { search: searchShows, signal: controller.signal })
+      .then((shows) => {
         setState({
           status: 'success',
           resultsQuery: trimmed,
-          shows: results.map((result) => result.show),
+          shows,
           error: null,
         })
       })

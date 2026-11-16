@@ -1,4 +1,4 @@
-import { type ShowCardProps, usePresenter } from './usePresenter'
+import { type ShowCardProps, usePresenter } from './logic/usePresenter'
 
 import styles from './ShowCard.module.css'
 

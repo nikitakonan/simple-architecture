@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
 
-import type { Show } from '../../../api/types'
-
-import { formatShow } from './formatShow'
+import type { Show } from '../../../../api/types'
+import { formatShow } from './tasks/formatShow'
 
 export type ShowCardProps = {
   show: Show

@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
 
-import type { Show } from '../../api/types'
-import { useShowSearch } from '../../hooks/useShowSearch'
+import type { Show } from '../../../api/types'
+import { useShowSearch } from '../../../hooks/useShowSearch'
 
 import { usePresenter } from './usePresenter'
 
-vi.mock('../../hooks/useShowSearch')
-vi.mock('../../hooks/useDebounce', () => ({
+vi.mock('../../../hooks/useShowSearch')
+vi.mock('../../../hooks/useDebounce', () => ({
   useDebounce: <T>(value: T) => value,
 }))
 

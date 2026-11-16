@@ -53,6 +53,7 @@ src/
   index.css               # global styles (reset, root variables)
   api/                    # Model: TVmaze client and response types (no React)
   hooks/                  # shared non-UI hooks: useDebounce, useShowSearch
+  tasks/                  # shared business tasks (plain TS): findShows
   ui/                     # generic UI primitives with no domain knowledge (Chip)
   components/             # shared components that know the domain (ErrorState)
   pages/
@@ -60,19 +61,27 @@ src/
       index.tsx           # the page view
       HomePage.module.css
       HomePage.test.tsx
-      usePresenter.ts     # all of the page's logic
-      usePresenter.test.ts
-      useSearchParam.ts   # local hooks used only by this presenter
-      useGenreFilter.ts
-      usePagination.ts
+      logic/
+        usePresenter.ts   # the page's presenter: state, effects, handlers
+        usePresenter.test.ts
+        useSearchParam.ts # local hooks used only by this presenter
+        useGenreFilter.ts
+        usePagination.ts
+        tasks/            # business logic as plain TS functions (no React)
+          countGenres.ts
+          filterByGenre.ts
+          paginate.ts
+          getHomeView.ts
+          describeResults.ts
+          describeRange.ts
       Header/             # child components used once by the page,
       SearchField/        # each in its own folder
       IdleState/
       LoadingState/
       EmptyState/
       GenreFilter/
-      ShowCard/           # has its own usePresenter.ts (formats a show)
-      Pagination/         # has its own usePresenter.ts (page buttons state)
+      ShowCard/           # logic/usePresenter.ts + logic/tasks/formatShow.ts
+      Pagination/         # logic/usePresenter.ts (page buttons state)
   test/
     setup.ts              # Vitest setup: jest-dom matchers, cleanup
 ```
@@ -80,7 +89,8 @@ src/
 ## Conventions
 
 - One component per file. Every component, even a small single-use one, is its own folder: `index.tsx` (the view), `Component.module.css` and `Component.test.tsx`.
-- Logic lives in `usePresenter.ts` next to the view, and the view only calls `usePresenter()` and renders. A component without logic has no presenter.
+- Logic lives in the component's `logic/` folder: `logic/usePresenter.ts` holds the state and handlers, and the view only calls `usePresenter()` and renders. A component without logic has no `logic/` folder.
+- Business rules are tasks in `logic/tasks/`: plain TypeScript functions with no React that receive their dependencies (such as API modules) as arguments.
 - Other code imports a component by its folder (`./ShowCard`), never by its inner files.
 - No file is longer than 120 lines.
 - Styling uses CSS Modules only. Only resets and root variables go in global CSS.

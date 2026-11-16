@@ -1,5 +1,8 @@
-import { useDebounce } from '../../hooks/useDebounce'
-import { useShowSearch } from '../../hooks/useShowSearch'
+import { useDebounce } from '../../../hooks/useDebounce'
+import { useShowSearch } from '../../../hooks/useShowSearch'
+import { describeRange } from './tasks/describeRange'
+import { describeResults } from './tasks/describeResults'
+import { getHomeView } from './tasks/getHomeView'
 
 import { useGenreFilter } from './useGenreFilter'
 import { usePagination } from './usePagination'
@@ -10,8 +13,6 @@ const DEBOUNCE_MS = 400
 const SUGGESTIONS = ['murder', 'office', 'dragon', 'space']
 const ERROR_MESSAGE =
   'TVmaze didn’t respond. Check your connection and try again.'
-
-export type HomeView = 'idle' | 'loading' | 'error' | 'empty' | 'results'
 
 export function usePresenter() {
   const [query, setQuery] = useSearchParam('q')
@@ -29,20 +30,7 @@ export function usePresenter() {
     PAGE_SIZE,
   )
 
-  // While a new search loads, the previous results stay on screen (dimmed)
-  // instead of being replaced by the skeleton.
-  let view: HomeView = 'loading'
-  if (!hasQuery) view = 'idle'
-  else if (status === 'error') view = 'error'
-  else if (shows.length > 0) view = 'results'
-  else if (status === 'success') view = 'empty'
-
-  const total = shows.length
-  const filtered = filteredItems.length
-  const showsWord = total === 1 ? 'show' : 'shows'
-  const resultsLabel = selectedGenre
-    ? `${filtered} ${selectedGenre} of ${total} ${showsWord}`
-    : `${total} ${showsWord}`
+  const view = getHomeView({ hasQuery, status, resultCount: shows.length })
 
   return {
     query,
@@ -60,12 +48,20 @@ export function usePresenter() {
     selectedGenre,
     selectGenre,
     resetGenre: () => selectGenre(null),
-    totalCount: total,
-    resultsLabel,
+    totalCount: shows.length,
+    resultsLabel: describeResults({
+      total: shows.length,
+      filtered: filteredItems.length,
+      genre: selectedGenre,
+    }),
     visibleShows: pageItems,
     page,
     pageCount,
     setPage,
-    rangeLabel: `Showing ${firstIndex + 1}–${firstIndex + pageItems.length} of ${filtered}`,
+    rangeLabel: describeRange({
+      firstIndex,
+      pageItemCount: pageItems.length,
+      total: filteredItems.length,
+    }),
   }
 }

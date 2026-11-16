@@ -1,4 +1,4 @@
-import { type PaginationProps, usePresenter } from './usePresenter'
+import { type PaginationProps, usePresenter } from './logic/usePresenter'
 
 import styles from './Pagination.module.css'
 

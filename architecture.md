@@ -2,13 +2,14 @@
 
 These rules describe how code in this app is organised. The goal is to keep the
 UI separate from the logic, in the spirit of the **MVP (Model–View–Presenter)**
-pattern:
+pattern, and to keep business rules separate from React:
 
-| Layer         | Where it lives                    | Responsibility                                          |
-| ------------- | --------------------------------- | ------------------------------------------------------- |
-| **Model**     | `src/api/`, `src/hooks/`          | Talking to the API, data types, reusable non-UI logic   |
-| **Presenter** | `usePresenter.ts` next to a view  | State, effects, event handlers, derived data for a view |
-| **View**      | `index.tsx` of a component folder | Rendering only: takes data from the presenter or props  |
+| Layer         | Where it lives                    | Responsibility                                                |
+| ------------- | --------------------------------- | ------------------------------------------------------------- |
+| **Model**     | `src/api/`, `src/hooks/`          | Talking to the API, data types, reusable non-UI hooks         |
+| **Tasks**     | `logic/tasks/` of a component     | Business logic: plain TypeScript functions, no framework      |
+| **Presenter** | `logic/usePresenter.ts` of a view | State, effects, event handlers; calls tasks and wires deps in |
+| **View**      | `index.tsx` of a component folder | Rendering only: takes data from the presenter or props        |
 
 ## 1. Folder layout
 
@@ -20,6 +21,9 @@ src/
 ├── hooks/                    # Reusable non-UI hooks (useDebounce, useShowSearch, ...)
 │   ├── useDebounce.ts
 │   └── useDebounce.test.ts
+├── tasks/                    # Business tasks shared by more than one component or hook
+│   ├── findShows.ts
+│   └── findShows.test.ts
 ├── ui/                       # App-wide UI primitives that know nothing about the domain
 │   ├── Button/
 │   ├── Chip/
@@ -28,16 +32,22 @@ src/
 │   └── ErrorState/
 ├── pages/
 │   └── HomePage/
-│       ├── index.tsx             # the HomePage component itself
+│       ├── index.tsx             # the HomePage component itself (the view)
 │       ├── HomePage.module.css
 │       ├── HomePage.test.tsx
-│       ├── usePresenter.ts
-│       ├── usePresenter.test.ts
-│       ├── useSearchParam.ts     # local hooks used only by this presenter
-│       ├── useGenreFilter.ts
-│       ├── useGenreFilter.test.ts
-│       ├── usePagination.ts
-│       ├── usePagination.test.ts
+│       ├── logic/                # everything that isn't rendering
+│       │   ├── usePresenter.ts
+│       │   ├── usePresenter.test.ts
+│       │   ├── useSearchParam.ts     # local hooks used only by this presenter
+│       │   ├── useGenreFilter.ts
+│       │   ├── useGenreFilter.test.ts
+│       │   ├── usePagination.ts
+│       │   ├── usePagination.test.ts
+│       │   └── tasks/                # business logic: plain TS, no React
+│       │       ├── countGenres.ts
+│       │       ├── countGenres.test.ts
+│       │       ├── filterByGenre.ts
+│       │       └── filterByGenre.test.ts
 │       ├── Header/               # used once by HomePage: its own folder, next to the parent
 │       │   ├── index.tsx
 │       │   ├── Header.module.css
@@ -45,7 +55,13 @@ src/
 │       ├── ShowCard/             # used once by HomePage (inside a .map)
 │       │   ├── index.tsx
 │       │   ├── ShowCard.module.css
-│       │   └── ShowCard.test.tsx
+│       │   ├── ShowCard.test.tsx
+│       │   └── logic/
+│       │       ├── usePresenter.ts
+│       │       ├── usePresenter.test.ts
+│       │       └── tasks/
+│       │           ├── formatShow.ts
+│       │           └── formatShow.test.ts
 │       └── components/           # reused inside HomePage's subtree
 │           └── Pagination/
 │               ├── index.tsx
@@ -70,21 +86,22 @@ single-use ones:
 2. **Every component has its own folder.** This holds for single-use children
    that live directly in the parent's folder (section 3), not only for
    components in `components/`, `src/components/`, or `src/ui/`. If the
-   component has logic, its `usePresenter.ts` goes in the same folder; a
-   component without logic has no presenter (see section 4).
+   component has logic, it goes in a `logic/` folder inside the component's
+   folder; a component without logic has no `logic/` folder (see section 4).
 
 A component folder is named after the component (PascalCase) and contains:
 
-| File                   | Required | Purpose                                                      |
-| ---------------------- | -------- | ------------------------------------------------------------ |
-| `index.tsx`            | yes      | The component itself (the view) and the folder's entry point |
-| `Component.module.css` | yes\*    | The component's styles (CSS Modules only)                    |
-| `Component.test.tsx`   | yes      | Tests for the rendered view                                  |
-| `usePresenter.ts`      | if logic | All of the component's logic                                 |
-| `usePresenter.test.ts` | if logic | Tests for the logic, with `renderHook`                       |
-| `useSomething.ts`      | optional | Local hooks the presenter is split into (see section 5)      |
-| `Child/`               | optional | Child components that are used once (see section 3)          |
-| `components/`          | optional | Child components that are reused in this subtree             |
+| File / folder                | Required | Purpose                                                      |
+| ---------------------------- | -------- | ------------------------------------------------------------ |
+| `index.tsx`                  | yes      | The component itself (the view) and the folder's entry point |
+| `Component.module.css`       | yes\*    | The component's styles (CSS Modules only)                    |
+| `Component.test.tsx`         | yes      | Tests for the rendered view                                  |
+| `logic/usePresenter.ts`      | if logic | The presenter: state, effects, handlers                      |
+| `logic/usePresenter.test.ts` | if logic | Tests for the presenter, with `renderHook`                   |
+| `logic/useSomething.ts`      | optional | Local hooks the presenter is split into (see section 5)      |
+| `logic/tasks/someTask.ts`    | optional | Business tasks the presenter calls (see section 6)           |
+| `Child/`                     | optional | Child components that are used once (see section 3)          |
+| `components/`                | optional | Child components that are reused in this subtree             |
 
 \* You can skip the CSS module only if the component renders no elements of its
 own, for example a component that only composes other components.
@@ -94,7 +111,7 @@ The component is written directly in `index.tsx`; there is no separate
 component (and its props type if other code needs it).
 
 Code outside the folder **always imports the folder itself**, which resolves to
-`index.tsx`. It never imports the other files inside it:
+`index.tsx`. It never imports the other files inside it, `logic/` included:
 
 ```ts
 // ✅ good
@@ -102,7 +119,8 @@ import { HomePage } from './pages/HomePage'
 import { Chip } from '../../ui/Chip'
 
 // ❌ bad: reaches into another component's internals
-import { usePresenter } from './pages/HomePage/usePresenter'
+import { usePresenter } from './pages/HomePage/logic/usePresenter'
+import { countGenres } from './pages/HomePage/logic/tasks/countGenres'
 import styles from '../../ui/Chip/Chip.module.css'
 ```
 
@@ -125,17 +143,17 @@ Answer these questions in order:
    folder: `HomePage/components/Pagination/`.
 3. **Is it used only once, by one parent?** Put it in its own component folder
    directly inside the parent's folder: `HomePage/Header/`, with `index.tsx`,
-   `Header.module.css`, `Header.test.tsx`, and `usePresenter.ts` if it has
-   logic. It isn't
-   exported from the parent's `index.tsx`; it's an implementation detail.
+   `Header.module.css`, `Header.test.tsx`, and a `logic/` folder if it has
+   logic. It isn't exported from the parent's `index.tsx`; it's an
+   implementation detail.
 
 "Used once" means a single place in the JSX. A component rendered inside one
 `.map()` is still used once.
 
 A single-use child is a full component folder like any other (section 2). If
-it needs its own state or effects, add a `usePresenter.ts` to its folder. A
-folder holds only one `usePresenter.ts`, so giving every component a folder
-keeps the rule "one presenter per view".
+it needs its own state or effects, add `logic/usePresenter.ts` to its folder.
+A folder holds only one `logic/usePresenter.ts`, so giving every component a
+folder keeps the rule "one presenter per view".
 
 ### Moving a component when its usage changes
 
@@ -146,38 +164,47 @@ keeps the rule "one presenter per view".
 - Never import from another component's `components/` folder. If you need
   something from there, move it up.
 
-## 4. Logic lives in `usePresenter.ts`
+A component's `logic/` folder always moves with it.
+
+## 4. Logic lives in `logic/`
 
 The view (`index.tsx`) only renders. It:
 
 - calls **one** hook, `usePresenter()` (or `usePresenter(props)` when the
-  presenter needs the props), and nothing else (`useState`, `useEffect`, and
-  data hooks go in the presenter), or no hook at all if it has no logic;
+  presenter needs the props), imported from `./logic/usePresenter`, and
+  nothing else (`useState`, `useEffect`, and data hooks go in the presenter),
+  or no hook at all if it has no logic;
 - maps the presenter's values to JSX and connects event handlers;
 - doesn't compute derived data (filtering, slicing, counting); the presenter
-  returns it ready to render.
+  returns it ready to render;
+- never imports anything else from `logic/` (local hooks, tasks).
 
-The presenter (`usePresenter.ts`):
+The presenter (`logic/usePresenter.ts`):
 
 - holds the state, effects, and event handlers;
 - composes hooks: shared ones from `src/hooks/` (like `useDebounce`) and local
-  ones from its own folder (like `useSearchParam`);
-- reaches `src/api/` only through hooks; it never calls `fetch` directly;
+  ones from its own `logic/` folder (like `useSearchParam`);
+- delegates business rules to **tasks** (section 6) and passes them their
+  dependencies; it doesn't implement business rules inline;
+- reaches `src/api/` only through hooks or by handing an API module to a task;
+  it never calls `fetch` directly;
 - returns a plain object with everything the view needs, already derived;
 - never returns JSX and never imports CSS.
 
-`usePresenter.ts` is optional. Components without logic (most `ui/`
+A `logic/` folder is optional. Components without logic (most `ui/`
 primitives, many single-use children) don't have one; they just render their
-props. Add a presenter as soon as a component needs state, effects, or derived
-data. When the presenter needs the component's props, declare the props type
-in `usePresenter.ts` and call `usePresenter(props)` from the view.
+props. Add `logic/usePresenter.ts` as soon as a component needs state,
+effects, or derived data. When the presenter needs the component's props,
+declare the props type in `logic/usePresenter.ts` and call
+`usePresenter(props)` from the view.
 
 ### Example: HomePage
 
 ```ts
-// src/pages/HomePage/usePresenter.ts
-import { useDebounce } from '../../hooks/useDebounce'
-import { useShowSearch } from '../../hooks/useShowSearch'
+// src/pages/HomePage/logic/usePresenter.ts
+import { useDebounce } from '../../../hooks/useDebounce'
+import { useShowSearch } from '../../../hooks/useShowSearch'
+
 import { useGenreFilter } from './useGenreFilter'
 import { usePagination } from './usePagination'
 import { useSearchParam } from './useSearchParam'
@@ -189,8 +216,8 @@ export function usePresenter() {
   const debouncedQuery = useDebounce(query, 400) // shared
   const { shows, status, error } = useShowSearch(debouncedQuery) // shared
 
-  // local: unique genres + the memoized list filtered by the selected one;
-  // resets the selection when `shows` changes
+  // local: holds the selected genre and calls the countGenres and
+  // filterByGenre tasks; resets the selection when `shows` changes
   const { genres, selectedGenre, selectGenre, filteredShows } =
     useGenreFilter(shows)
 
@@ -217,27 +244,36 @@ export function usePresenter() {
 ```
 
 The presenter reads like a summary of the page's behaviour: each step is a
-small hook in the same folder or in `src/hooks/`. One of the local hooks:
+small hook in `logic/` or in `src/hooks/`, and the rules behind each step are
+tasks in `logic/tasks/`. A local hook keeps the React state and leaves the
+business rule to a task:
 
 ```ts
-// src/pages/HomePage/usePagination.ts
-import { useState } from 'react'
+// src/pages/HomePage/logic/useGenreFilter.ts
+import { useMemo, useState } from 'react'
 
-export function usePagination<T>(items: T[], pageSize: number) {
-  const [page, setPage] = useState(1)
-  const [prevItems, setPrevItems] = useState(items)
+import type { Show } from '../../../api/types'
 
-  // A new list (new search or genre) starts again from the first page.
-  // `items` must be memoized by the caller, or this resets on every render.
-  if (items !== prevItems) {
-    setPrevItems(items)
-    setPage(1)
+import { countGenres } from './tasks/countGenres'
+import { filterByGenre } from './tasks/filterByGenre'
+
+export function useGenreFilter(shows: Show[]) {
+  const [selectedGenre, selectGenre] = useState<string | null>(null)
+  const [prevShows, setPrevShows] = useState(shows)
+
+  // A new search clears the selection.
+  if (shows !== prevShows) {
+    setPrevShows(shows)
+    selectGenre(null)
   }
 
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize))
-  const pageItems = items.slice((page - 1) * pageSize, page * pageSize)
+  const genres = useMemo(() => countGenres(shows), [shows])
+  const filteredShows = useMemo(
+    () => filterByGenre(shows, selectedGenre),
+    [shows, selectedGenre],
+  )
 
-  return { page, pageCount, setPage, pageItems }
+  return { genres, selectedGenre, selectGenre, filteredShows }
 }
 ```
 
@@ -246,11 +282,13 @@ export function usePagination<T>(items: T[], pageSize: number) {
 import { ErrorState } from '../../components/ErrorState'
 import { Chip } from '../../ui/Chip'
 import { Spinner } from '../../ui/Spinner'
+
 import { Pagination } from './components/Pagination'
 import { Header } from './Header'
-import styles from './HomePage.module.css'
+import { usePresenter } from './logic/usePresenter'
 import { ShowCard } from './ShowCard'
-import { usePresenter } from './usePresenter'
+
+import styles from './HomePage.module.css'
 
 export function HomePage() {
   const {
@@ -284,10 +322,10 @@ export function HomePage() {
             />
             {genres.map((genre) => (
               <Chip
-                key={genre}
-                label={genre}
-                selected={genre === selectedGenre}
-                onClick={() => selectGenre(genre)}
+                key={genre.name}
+                label={genre.name}
+                selected={genre.name === selectedGenre}
+                onClick={() => selectGenre(genre.name)}
               />
             ))}
           </div>
@@ -314,6 +352,7 @@ Notes on this example:
   `HomePage/components/Pagination/`.
 - `Chip` and `Spinner` are generic → `src/ui/`. `ErrorState` is shared by
   pages → `src/components/`.
+- The view imports only `./logic/usePresenter` from `logic/`.
 
 ### Example: a single-use child without logic
 
@@ -342,8 +381,8 @@ export function Header({ query, onQueryChange }: HeaderProps) {
 }
 ```
 
-`Header` has no state or derived data, so its folder has no `usePresenter.ts`.
-It is still a folder (`HomePage/Header/`), not a flat `HomePage/Header.tsx`.
+`Header` has no state or derived data, so its folder has no `logic/`. It is
+still a folder (`HomePage/Header/`), not a flat `HomePage/Header.tsx`.
 
 ### Example: a UI primitive
 
@@ -375,42 +414,208 @@ export function Chip({ label, selected = false, onClick }: ChipProps) {
 
 No file may be longer than **120 lines**, counted as formatted by Biome and
 including imports. This applies to every source file: components, presenters,
-hooks, API modules, CSS modules, and tests. When a file grows past the limit,
-split it:
+hooks, tasks, API modules, CSS modules, and tests. When a file grows past the
+limit, split it:
 
-| What is too long       | How to split it                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| A view (`index.tsx`)   | Extract child components and place them by the rules in section 3                 |
-| `usePresenter.ts`      | Extract local hooks into the same folder: `useSearchParam.ts`, `usePagination.ts` |
-| A local or shared hook | Extract smaller hooks or plain helper functions                                   |
-| A CSS module           | Usually means the component needs children; their styles move with them           |
-| A test file            | Test extracted hooks and children in their own test files                         |
-| An `api/` module       | One file per resource (`shows.ts`, `people.ts`), types in `types.ts`              |
+| What is too long        | How to split it                                                          |
+| ----------------------- | ------------------------------------------------------------------------ |
+| A view (`index.tsx`)    | Extract child components and place them by the rules in section 3        |
+| `logic/usePresenter.ts` | Extract local hooks into `logic/` and business rules into `logic/tasks/` |
+| A local or shared hook  | Extract smaller hooks, or move the rules it applies into tasks           |
+| A task                  | Split it into smaller tasks in the same `tasks/` folder and compose them |
+| A CSS module            | Usually means the component needs children; their styles move with them  |
+| A test file             | Test extracted hooks, tasks, and children in their own test files        |
+| An `api/` module        | One file per resource (`shows.ts`, `people.ts`), types in `types.ts`     |
 
 ### Local hooks
 
 A presenter can import:
 
-- **Local hooks from its own folder**: `HomePage/useSearchParam.ts`,
-  `HomePage/useGenreFilter.ts`. Use these for logic that belongs to this
-  component only.
+- **Local hooks from its own `logic/` folder**: `HomePage/logic/useSearchParam.ts`,
+  `HomePage/logic/useGenreFilter.ts`. Use these for React logic that belongs
+  to this component only.
 - **Shared hooks from `src/hooks/`**: `useDebounce`, `useShowSearch`. Use these
-  for logic that more than one component needs.
+  for React logic that more than one component needs.
 
 Rules for local hooks:
 
-- Each local hook is one file named after the hook (`useGenreFilter.ts`), with
-  its own `useGenreFilter.test.ts` when it has logic worth testing.
-- Only the presenter of the same folder (or another local hook in that folder)
+- Each local hook is one file in `logic/` named after the hook
+  (`useGenreFilter.ts`), with its own `useGenreFilter.test.ts` when it has
+  logic worth testing.
+- Only the presenter of the same `logic/` folder (or another local hook in it)
   imports a local hook. The view never calls them, and other folders never
   import them.
+- A local hook holds React state and effects. When it starts applying a
+  business rule (counting, filtering, validating, deciding), move that rule
+  into a task.
 - When a second component needs a local hook, move it to `src/hooks/`.
 
-## 6. Model layer: `api/` and `hooks/`
+## 6. Business logic lives in `logic/tasks/`
 
-- `src/api/` holds plain TypeScript with no React: request functions and
-  response types. Every request function accepts an `AbortSignal` so callers
-  can cancel it.
+A **task** is one unit of business logic: what the app does, independent of
+how it's shown or which framework runs it. "Log the user out", "count the
+genres of these shows", "filter shows by genre", and "format a show for a card"
+are tasks. If a presenter or hook does more than wire state to the view, the
+"more" is probably a task.
+
+Tasks are **framework-agnostic**: plain TypeScript functions.
+
+- One task per file, named after the function: `logic/tasks/logout.ts` exports
+  `logout`. The file may also export the types of the task's input, output,
+  and dependencies.
+- No React: a task never imports `react`, never calls hooks, and never touches
+  component state. It takes values as arguments and returns a result (or a
+  `Promise` of one).
+- No direct I/O: a task never calls `fetch`, `localStorage`, `window`, or an
+  `src/api/` function itself. It declares what it needs as an **abstraction**
+  (a TypeScript type describing the dependency) and receives the concrete
+  implementation as an argument.
+- It may import domain types with `import type` (for example `Show` from
+  `src/api/types.ts`) and other tasks from the same `tasks/` folder or from
+  `src/tasks/`.
+- It never imports from the view, the presenter, local hooks, or CSS.
+
+### Depending on abstractions
+
+A task owns the interface of what it depends on; the presenter decides what
+implements it. This keeps the task testable with plain fakes and lets the
+implementation change (another API, a mock, storage) without touching the
+business rule.
+
+```ts
+// src/pages/ProfileMenu/logic/tasks/logout.ts
+export type AuthApi = {
+  revokeSession: (token: string) => Promise<void>
+}
+
+export type TokenStore = {
+  read: () => string | null
+  clear: () => void
+}
+
+export type LogoutDeps = {
+  auth: AuthApi
+  tokens: TokenStore
+}
+
+export async function logout({ auth, tokens }: LogoutDeps): Promise<void> {
+  const token = tokens.read()
+  // Forget the token locally even if the server call fails.
+  try {
+    if (token) await auth.revokeSession(token)
+  } finally {
+    tokens.clear()
+  }
+}
+```
+
+The presenter wires the concrete implementations in and keeps the React side
+(state, effects, handlers):
+
+```ts
+// src/pages/ProfileMenu/logic/usePresenter.ts
+import { useState } from 'react'
+
+import { authApi } from '../../../api/auth'
+import { tokenStore } from '../../../api/tokenStore'
+
+import { logout } from './tasks/logout'
+
+export function usePresenter() {
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    await logout({ auth: authApi, tokens: tokenStore })
+    setIsLoggingOut(false)
+  }
+
+  return { isLoggingOut, logout: handleLogout }
+}
+```
+
+`authApi` and `tokenStore` only need to match the `AuthApi` and `TokenStore`
+shapes; the task never imports them. Concrete implementations live in
+`src/api/` (or another Model module), not in `tasks/`.
+
+### Pure tasks
+
+Many tasks have no dependencies at all; they take data and return data:
+
+```ts
+// src/pages/HomePage/logic/tasks/countGenres.ts
+import type { Show } from '../../../../api/types'
+
+export type GenreOption = { name: string; count: number }
+
+export function countGenres(shows: Show[]): GenreOption[] {
+  const counts = new Map<string, number>()
+  for (const show of shows) {
+    for (const genre of show.genres) {
+      counts.set(genre, (counts.get(genre) ?? 0) + 1)
+    }
+  }
+  return [...counts]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+```
+
+### Shared tasks
+
+- A task in `logic/tasks/` is private to its component: only that
+  component's presenter, local hooks, and other tasks in the same folder
+  import it.
+- When a second component, or a shared hook in `src/hooks/`, needs a task,
+  move it to `src/tasks/`. Shared tasks follow the same rules: plain
+  TypeScript, dependencies passed in as arguments, a test next to each one.
+- Shared tasks are imported by presenters, local hooks, shared hooks, and
+  other tasks. Views, `ui/`, and `api/` never import them.
+
+`findShows` is a shared task. It declares the search it needs as a type and
+never imports the TVmaze client:
+
+```ts
+// src/tasks/findShows.ts
+import type { SearchResult, Show } from '../api/types'
+
+/** Anything that can search shows: the TVmaze client, a fake in tests. */
+export type SearchShows = (
+  query: string,
+  signal?: AbortSignal,
+) => Promise<SearchResult[]>
+
+export type FindShowsDeps = {
+  search: SearchShows
+  signal?: AbortSignal
+}
+
+/** Shows matching `query`, in the order the search ranks them. */
+export async function findShows(
+  query: string,
+  { search, signal }: FindShowsDeps,
+): Promise<Show[]> {
+  const results = await search(query, signal)
+  return results.map((result) => result.show)
+}
+```
+
+The shared hook `useShowSearch` passes in the real client and keeps the React
+side (the `AbortController`, the loading and error state, retries):
+
+```ts
+// src/hooks/useShowSearch.ts (excerpt)
+import { searchShows } from '../api/tvmaze'
+import { findShows } from '../tasks/findShows'
+
+findShows(trimmed, { search: searchShows, signal: controller.signal })
+```
+
+## 7. Model layer: `api/` and `hooks/`
+
+- `src/api/` holds plain TypeScript with no React: request functions, response
+  types, and other concrete implementations that tasks depend on. Every
+  request function accepts an `AbortSignal` so callers can cancel it.
 
   ```ts
   // src/api/tvmaze.ts
@@ -434,11 +639,13 @@ Rules for local hooks:
   ```
 
 - `src/hooks/` holds reusable hooks that aren't tied to one view:
-  `useDebounce`, and `useShowSearch`, which wraps `searchShows` with an
-  `AbortController` and the loading, error, and success states. Presenters use
-  these hooks; views never import them.
+  `useDebounce`, and `useShowSearch`, which runs the `findShows` task with
+  the TVmaze client, an `AbortController`, and the loading, error, and success
+  states. Presenters use these hooks; views never import them. A shared hook
+  may call tasks from `src/tasks/`, but never tasks from a component's
+  `logic/tasks/`.
 
-## 7. Dependency rules
+## 8. Dependency rules
 
 Imports may only point "down" this list:
 
@@ -447,37 +654,70 @@ pages  →  components  →  ui
   │           │
   └─────┬─────┘
         ▼
-      hooks  →  api
+  logic/usePresenter  →  logic/use*  →  logic/tasks  →  src/tasks
+        │                    │               │
+        └────────┬───────────┘               │ (import type only)
+                 ▼                           ▼
+               hooks  →  api  ─────────►  api/types
 ```
 
-- `ui/` imports nothing from `api/`, `hooks/`, `components/`, or `pages/`.
+- `ui/` imports nothing from `api/`, `hooks/`, `tasks/`, `components/`, or
+  `pages/`.
 - `components/` never imports from `pages/`.
 - `api/` imports nothing from React or from the rest of the app.
+- Shared hooks (`src/hooks/`) may import shared tasks (`src/tasks/`).
+- Tasks (`logic/tasks/`, `src/tasks/`) import nothing from React, `hooks/`,
+  views, presenters, or local hooks, and only types from `api/`.
 - A child never imports from its parent. Data goes down through props, and
   events come up through callbacks.
-- A view imports its own `usePresenter`, child components, and its CSS module.
-  It never imports from `hooks/` or `api/` (type-only imports of API types for
-  props are fine), and never imports the local hooks in its own folder.
-- Local hooks (`HomePage/usePagination.ts`) are imported only by the presenter
-  and other local hooks in the same folder.
+- A view imports `./logic/usePresenter`, child components, and its CSS module.
+  It never imports from `hooks/`, `tasks/`, or `api/` (type-only imports of API
+  types for props are fine), and never imports local hooks or tasks from its
+  own `logic/` folder.
+- Local hooks (`HomePage/logic/usePagination.ts`) and tasks
+  (`HomePage/logic/tasks/countGenres.ts`) are imported only from inside the
+  same `logic/` folder.
 
-## 8. Tests
+## 9. Tests
 
 - Every component folder has `Component.test.tsx`, which tests what the user
   sees and does with Testing Library (queries by role or label, not by class
   name).
-- Every `usePresenter.ts` has `usePresenter.test.ts`, which tests the logic
-  with `renderHook` and `act`, without rendering any markup.
+- Every `logic/usePresenter.ts` has `logic/usePresenter.test.ts`, which tests
+  the logic with `renderHook` and `act`, without rendering any markup.
+- Every task has a test next to it (`logic/tasks/logout.test.ts`). Tasks are
+  plain functions, so their tests are plain too: no `renderHook`, no `render`,
+  and no global `fetch` mocks. Pass fakes that match the task's dependency
+  types:
+
+  ```ts
+  // src/pages/ProfileMenu/logic/tasks/logout.test.ts
+  import { logout } from './logout'
+
+  describe('logout', () => {
+    it('clears the token even if revoking it fails', async () => {
+      const tokens = { read: () => 'abc', clear: vi.fn() }
+      const auth = { revokeSession: vi.fn().mockRejectedValue(new Error()) }
+
+      await expect(logout({ auth, tokens })).rejects.toThrow()
+      expect(tokens.clear).toHaveBeenCalled()
+    })
+  })
+  ```
+
+- A presenter test may mock its tasks (`vi.mock('./tasks/logout')`) to check
+  only the wiring and the state, since the rules are covered by task tests.
 - A view test may mock its presenter to check each state (loading, error,
   empty, results) in isolation:
 
   ```tsx
   // src/pages/HomePage/HomePage.test.tsx
   import { render, screen } from '@testing-library/react'
-  import { HomePage } from '.'
-  import { usePresenter } from './usePresenter'
 
-  vi.mock('./usePresenter')
+  import { HomePage } from '.'
+  import { usePresenter } from './logic/usePresenter'
+
+  vi.mock('./logic/usePresenter')
 
   const basePresenter = {
     query: '',
@@ -509,7 +749,7 @@ pages  →  components  →  ui
   `Component.test.tsx` too (`HomePage/Header/Header.test.tsx`). The parent's
   test doesn't need to repeat what the child's test already covers.
 
-## 9. Checklist for a new component
+## 10. Checklist for a new component
 
 - [ ] Decide where it goes: `ui/`, `components/`, the parent's `components/`,
   or a folder directly inside the parent's folder (section 3).
@@ -517,31 +757,34 @@ pages  →  components  →  ui
   `Component.module.css`, and `Component.test.tsx`, even if the component is
   small or used once.
 - [ ] Keep one component per file: `index.tsx` defines only this component.
-- [ ] If it has logic, put it in `usePresenter.ts` and test it in
-  `usePresenter.test.ts`.
+- [ ] If it has logic, put it in `logic/usePresenter.ts` and test it in
+  `logic/usePresenter.test.ts`.
+- [ ] Put business rules in tasks under `logic/tasks/`: plain TypeScript, no
+  React, dependencies passed in as abstractions, each with its own test.
 - [ ] Make sure the view calls only `usePresenter()` / `usePresenter(props)`
   (or no hook at all) and renders.
-- [ ] Keep every file at 120 lines or fewer; split views into children and
-  presenters into local hooks (section 5).
+- [ ] Keep every file at 120 lines or fewer; split views into children,
+  presenters into local hooks and tasks (section 5).
 - [ ] Import other components only by their folder path, never their inner
   files.
 - [ ] Run `npm run check` and `npm run test:run`.
 
-## 10. How these rules are enforced
+## 11. How these rules are enforced
 
 `npm run check` runs Biome, which checks most of these rules automatically. The
 config is in `biome.json`; a custom GritQL rule is in `biome-plugins/`.
 
-| Rule                                                  | Biome check                                                   |
-| ----------------------------------------------------- | ------------------------------------------------------------- |
-| At most 120 lines per file (TS, TSX, CSS)             | `style/noExcessiveLinesPerFile`                               |
-| Named exports only (except `*.config.ts`)             | `style/noDefaultExport`                                       |
-| Import a component by its folder, not its inner files | `style/noRestrictedImports`, all files                        |
-| A view imports only its own `usePresenter`            | `style/noRestrictedImports`, override for `src/**/index.tsx`  |
-| A view calls only `usePresenter()`                    | plugin `biome-plugins/view-only-presenter.grit`               |
-| `ui/` doesn't depend on app code                      | `style/noRestrictedImports`, override for `src/ui/**`         |
-| `components/` never imports from `pages/`             | `style/noRestrictedImports`, override for `src/components/**` |
-| `api/` has no React or app imports                    | `style/noRestrictedImports`, override for `src/api/**`        |
+| Rule                                                     | Biome check                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| At most 120 lines per file (TS, TSX, CSS)                | `style/noExcessiveLinesPerFile`                               |
+| Named exports only (except `*.config.ts`)                | `style/noDefaultExport`                                       |
+| Import a component by its folder, not its inner files    | `style/noRestrictedImports`, all files                        |
+| A view imports only `./logic/usePresenter` from `logic/` | `style/noRestrictedImports`, override for `src/**/index.tsx`  |
+| A view calls only `usePresenter()`                       | plugin `biome-plugins/view-only-presenter.grit`               |
+| Tasks import no React, hooks, or API implementations     | `style/noRestrictedImports`, override for `src/**/tasks/**`   |
+| `ui/` doesn't depend on app code                         | `style/noRestrictedImports`, override for `src/ui/**`         |
+| `components/` never imports from `pages/`                | `style/noRestrictedImports`, override for `src/components/**` |
+| `api/` has no React or app imports                       | `style/noRestrictedImports`, override for `src/api/**`        |
 
 Things to know when changing the config:
 
@@ -550,8 +793,8 @@ Things to know when changing the config:
   why every override repeats the "import by folder" pattern. Keep it in each
   new override too.
 - Import patterns match the import path as written. A relative import that
-  doesn't name the folder, like `../HomePage/usePresenter` from a sibling
-  page, isn't caught.
+  doesn't name the folder, like `../HomePage/logic/usePresenter` from a
+  sibling page, isn't caught.
 - The view rules apply to `index.tsx` files. Since every component lives in
   an `index.tsx` (section 2), they cover every component; a component in any
   other file escapes them, which is one more reason not to write one.
@@ -564,4 +807,6 @@ checklist above:
   component files like `Header.tsx`);
 - a component is placed by how often it's used (section 3);
 - a child never imports from its parent;
-- a presenter returns no JSX and imports no CSS.
+- a presenter returns no JSX and imports no CSS;
+- business rules live in tasks, not inline in presenters or hooks;
+- a task receives its dependencies as arguments instead of importing them.

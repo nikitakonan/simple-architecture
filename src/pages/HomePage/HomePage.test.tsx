@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 
 import type { Show } from '../../api/types'
 
-import { usePresenter } from './usePresenter'
+import { usePresenter } from './logic/usePresenter'
 
 import { HomePage } from '.'
 
-vi.mock('./usePresenter')
+vi.mock('./logic/usePresenter')
 
 type Presenter = ReturnType<typeof usePresenter>
 

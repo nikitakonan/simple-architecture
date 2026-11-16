@@ -5,10 +5,10 @@ import { GenreFilter } from './GenreFilter'
 import { Header } from './Header'
 import { IdleState } from './IdleState'
 import { LoadingState } from './LoadingState'
+import { usePresenter } from './logic/usePresenter'
 import { Pagination } from './Pagination'
 import { SearchField } from './SearchField'
 import { ShowCard } from './ShowCard'
-import { usePresenter } from './usePresenter'
 
 import styles from './HomePage.module.css'
 

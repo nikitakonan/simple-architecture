@@ -81,7 +81,7 @@
                       "useSyncExternalStore",
                       "useTransition"
                     ],
-                    "message": "Views only render. Put hooks in usePresenter.ts."
+                    "message": "Views only render. Put hooks in logic/usePresenter.ts."
                   }
                 },
                 "patterns": [
@@ -99,10 +99,12 @@
                       "**/hooks/**",
                       "**/api/**",
                       "**/api",
+                      "**/tasks/**",
                       "./use*",
-                      "!./usePresenter"
+                      "./logic/**",
+                      "!./logic/usePresenter"
                     ],
-                    "message": "A view imports only its own usePresenter."
+                    "message": "A view imports only its own ./logic/usePresenter."
                   }
                 ]
               }
@@ -163,10 +165,55 @@
                       "**/api/**",
                       "**/api",
                       "**/hooks/**",
+                      "**/tasks/**",
                       "**/components/**",
                       "**/pages/**"
                     ],
                     "message": "ui/ must not depend on app code."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/**/tasks/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react": "Tasks are plain TypeScript. Don't import React."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/components/*/*",
+                      "**/ui/*/*",
+                      "**/pages/*/*",
+                      "!**/*.module.css"
+                    ],
+                    "message": "Import a component by its folder, not its inner files."
+                  },
+                  {
+                    "group": [
+                      "**/hooks/**",
+                      "**/components/**",
+                      "**/ui/**",
+                      "**/pages/**",
+                      "../use*",
+                      "../../use*",
+                      "*.css"
+                    ],
+                    "message": "Tasks don't import hooks, presenters, views, or CSS."
+                  },
+                  {
+                    "group": ["**/api/**", "**/api", "!**/api/types"],
+                    "message": "Tasks get API implementations as arguments. Import only types from api/types."
                   }
                 ]
               }
@@ -190,6 +237,7 @@
                   {
                     "group": [
                       "**/hooks/**",
+                      "**/tasks/**",
                       "**/components/**",
                       "**/ui/**",
                       "**/pages/**"
@@ -229,7 +277,7 @@
               ":BLANK_LINE:",
               ["**/components/**", "**/ui/**"],
               ":BLANK_LINE:",
-              ["**/hooks/**", "**/api/**"],
+              ["**/hooks/**", "**/tasks/**", "**/api/**"],
               ":BLANK_LINE:",
               ["./**", "!**/*.css"],
               ":BLANK_LINE:",
