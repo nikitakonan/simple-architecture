@@ -34,6 +34,9 @@ jobs:
 
       # The site is served from https://<user>.github.io/<repo>/, so assets need that base path.
       - run: npm run build -- --base="${{ steps.pages.outputs.base_path }}/"
+        env:
+          # The API Worker in server/ (deployed by deploy-api.yml).
+          VITE_API_URL: https://tv-shows-explorer-api.nikitakonan1991.workers.dev
 
       - uses: actions/upload-pages-artifact@v4
         with:

@@ -1,13 +1,13 @@
 # TV Shows Explorer
 
-A small React app for searching and browsing TV shows with the public [TVmaze API](https://www.tvmaze.com/api). It is homework #1; the full spec (in Russian) is in [task.md](task.md).
+A small React app for searching and browsing TV shows with the public [TVmaze API](https://www.tvmaze.com/api), through its own API server on Cloudflare Workers. It is homework #1; the full spec (in Russian) is in [task.md](task.md).
 
 ## Features
 
-- [x] **Search:** shows are fetched from `https://api.tvmaze.com/search/shows?q=<query>`, and the API does the filtering. The page starts with only a search field and a few suggested queries. The query is kept in the URL (`?q=murder`), so a search survives a reload and can be shared as a link.
-- [x] **Pagination:** results are shown 3 per page, with controls to move between pages.
-- [x] **Genre filter:** the unique genres from the current results are shown as clickable chips above the list, with a count for each. Selecting one shows only the shows in that genre, and the filter can be reset. Pagination applies to the filtered list.
-- [x] **UX:** input is debounced instead of sending a request per keystroke, outdated requests are cancelled with `AbortController`, and loading, error (with a retry button) and empty states are handled. While a new search loads, the previous results stay on screen.
+- [x] **Search:** shows are fetched from the API server (`server/`), which searches TVmaze. The page starts with only a search field and a few suggested queries. The query is kept in the URL (`?q=murder`), so a search survives a reload and can be shared as a link.
+- [x] **Pagination:** results are shown 3 per page, with controls to move between pages. The server returns one page at a time.
+- [x] **Genre filter:** the unique genres from the current results are shown as clickable chips above the list, with a count for each. Selecting one shows only the shows in that genre, and the filter can be reset. The server filters, and pagination applies to the filtered list.
+- [x] **UX:** input is debounced instead of sending a request per keystroke, outdated requests (a new query, genre or page) are cancelled with `AbortController`, and loading, error (with a retry button) and empty states are handled. While the next search, genre or page loads, the previous results stay on screen.
 - [x] **Stretch goal:** data fetching is written by hand, without `useQuery`.
 
 ## Tech stack
@@ -23,6 +23,7 @@ Requires Node.js 20.19+ or 22.12+ (developed on Node 24).
 
 ```sh
 npm install
+cp .env.example .env   # sets VITE_API_URL to the deployed API
 npm run dev
 ```
 
@@ -51,9 +52,9 @@ The code follows a Model–View–Presenter split. The full rules are in [archit
 src/
   main.tsx                # entry point, renders HomePage
   index.css               # global styles (reset, root variables)
-  api/                    # Model: TVmaze client and response types (no React)
-  hooks/                  # shared non-UI hooks: useDebounce, useShowSearch
-  tasks/                  # shared business tasks (plain TS): findShows
+  api/                    # Model: API client (shows.ts) and types (no React)
+  hooks/                  # shared non-UI hooks: useDebounce, useShowsPage
+  tasks/                  # shared business tasks (plain TS): findShowsPage
   ui/                     # generic UI primitives with no domain knowledge (Chip)
   components/             # shared components that know the domain (ErrorState)
   pages/
@@ -65,12 +66,8 @@ src/
         usePresenter.ts   # the page's presenter: state, effects, handlers
         usePresenter.test.ts
         useSearchParam.ts # local hooks used only by this presenter
-        useGenreFilter.ts
-        usePagination.ts
+        useBrowseState.ts # selected genre and page; reset on a new query
         tasks/            # business logic as plain TS functions (no React)
-          countGenres.ts
-          filterByGenre.ts
-          paginate.ts
           getHomeView.ts
           describeResults.ts
           describeRange.ts
@@ -88,7 +85,7 @@ src/
 
 ## API server (`server/`)
 
-A small backend on [Cloudflare Workers](https://workers.cloudflare.com/) (free tier) built with [Hono](https://hono.dev/). It calls TVmaze and does the genre filtering and pagination on the server. The frontend doesn't use it yet; switching over is the next step.
+A small backend on [Cloudflare Workers](https://workers.cloudflare.com/) (free tier) built with [Hono](https://hono.dev/). It calls TVmaze and does the genre filtering and pagination on the server. The frontend reads its URL from `VITE_API_URL`. Locally, copy `.env.example` to `.env` (it is git-ignored) and change the URL to `http://localhost:8787` to use a local server. The GitHub Pages build gets the deployed URL from `.github/workflows/deploy.yml`.
 
 ```
 GET /shows?q=<query>&genre=<genre>&page=<page>
@@ -101,7 +98,7 @@ GET /shows?q=<query>&genre=<genre>&page=<page>
 - TVmaze responses are cached in memory for 5 minutes, so changing the page or genre usually doesn't call TVmaze again. Responses also send `Cache-Control: max-age=300`.
 - CORS is limited to the origins in `ALLOWED_ORIGINS` in `server/wrangler.jsonc`.
 
-The response types are in `server/src/contract.ts`. The code follows the same split as the frontend: `app.ts` handles HTTP, `tasks/` holds plain TypeScript business logic that gets its dependencies as arguments, and `tvmaze/` and `cache/` hold the concrete implementations, which are wired together in `index.ts`.
+The response types are in `server/src/contract.ts`, and the frontend re-exports them from `src/api/types.ts`. The code follows the same split as the frontend: `app.ts` handles HTTP, `tasks/` holds plain TypeScript business logic that gets its dependencies as arguments, and `tvmaze/` and `cache/` hold the concrete implementations, which are wired together in `index.ts`.
 
 ```sh
 cd server

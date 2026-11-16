@@ -1,119 +1,119 @@
 import { act, renderHook } from '@testing-library/react'
 
-import type { Show } from '../../../api/types'
-import { useShowSearch } from '../../../hooks/useShowSearch'
+import type { ShowsPage } from '../../../api/types'
+import { useShowsPage } from '../../../hooks/useShowsPage'
 
 import { usePresenter } from './usePresenter'
 
-vi.mock('../../../hooks/useShowSearch')
+vi.mock('../../../hooks/useShowsPage')
 vi.mock('../../../hooks/useDebounce', () => ({
   useDebounce: <T>(value: T) => value,
 }))
 
-function makeShow(id: number, genres: string[]): Show {
-  return {
-    id,
-    name: `Show ${id}`,
-    genres,
-    status: 'Ended',
-    premiered: '2014-09-25',
-    network: { name: 'ABC' },
-    webChannel: null,
-    image: null,
-    summary: '<p>A <b>show</b>.</p>',
-  }
+const PAGE: ShowsPage = {
+  query: 'murder',
+  genre: 'Drama',
+  genres: [
+    { name: 'Comedy', count: 1 },
+    { name: 'Drama', count: 4 },
+  ],
+  totalCount: 5,
+  matchCount: 4,
+  page: 2,
+  pageCount: 2,
+  pageSize: 3,
+  firstIndex: 3,
+  items: [
+    { id: 7, name: 'Show 7', genres: ['Drama'] } as ShowsPage['items'][0],
+  ],
 }
 
-const SHOWS = [
-  makeShow(1, ['Drama', 'Crime']),
-  makeShow(2, ['Comedy']),
-  makeShow(3, ['Drama']),
-  makeShow(4, ['Drama', 'Mystery']),
-]
-
-type Search = ReturnType<typeof useShowSearch>
+type Result = ReturnType<typeof useShowsPage>
 const retry = vi.fn()
 
-function mockSearch(overrides: Partial<Search>) {
-  vi.mocked(useShowSearch).mockReturnValue({
+function mockPage(overrides: Partial<Result> = {}) {
+  vi.mocked(useShowsPage).mockReturnValue({
     status: 'success',
-    resultsQuery: 'murder',
-    shows: SHOWS,
+    data: PAGE,
     error: null,
     retry,
     ...overrides,
   })
 }
+const lastRequest = () => vi.mocked(useShowsPage).mock.lastCall?.[0]
 
 describe('usePresenter', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/')
   })
 
-  it('is idle and searches nothing while the query is empty', () => {
-    mockSearch({ status: 'idle', shows: [] })
+  it('is idle and requests nothing while the query is empty', () => {
+    mockPage({ status: 'idle', data: null })
     const { result } = renderHook(() => usePresenter())
 
     expect(result.current.view).toBe('idle')
-    expect(useShowSearch).toHaveBeenLastCalledWith('')
+    expect(lastRequest()).toEqual({ query: '', genre: null, page: 1 })
   })
 
   it('searches for the typed query and keeps it in the URL', () => {
-    mockSearch({ status: 'loading', shows: [] })
+    mockPage({ status: 'loading', data: null })
     const { result } = renderHook(() => usePresenter())
 
-    act(() => result.current.changeQuery('murder'))
+    act(() => result.current.changeQuery('murder '))
 
-    expect(useShowSearch).toHaveBeenLastCalledWith('murder')
+    expect(lastRequest()).toEqual({ query: 'murder', genre: null, page: 1 })
     expect(result.current.view).toBe('loading')
-    expect(window.location.search).toBe('?q=murder')
+    expect(result.current.isSearching).toBe(true)
+    expect(window.location.search).toBe('?q=murder+')
   })
 
-  it('paginates the results three at a time', () => {
-    mockSearch({})
+  it('shows the page the server returned', () => {
+    mockPage()
     window.history.replaceState(null, '', '/?q=murder')
     const { result } = renderHook(() => usePresenter())
 
     expect(result.current.view).toBe('results')
-    expect(result.current.resultsLabel).toBe('4 shows')
-    expect(result.current.visibleShows.map((s) => s.id)).toEqual([1, 2, 3])
-    expect(result.current.pageCount).toBe(2)
-
-    act(() => result.current.setPage(2))
-    expect(result.current.visibleShows.map((s) => s.id)).toEqual([4])
+    expect(result.current.visibleShows.map((s) => s.id)).toEqual([7])
+    expect(result.current.genres).toBe(PAGE.genres)
+    expect(result.current.resultsLabel).toBe('4 Drama of 5 shows')
     expect(result.current.rangeLabel).toBe('Showing 4–4 of 4')
+    expect(result.current.pageCount).toBe(2)
   })
 
-  it('filters by genre and goes back to the first page', () => {
-    mockSearch({})
+  it('requests the selected genre and page', () => {
+    mockPage()
     window.history.replaceState(null, '', '/?q=murder')
     const { result } = renderHook(() => usePresenter())
 
-    act(() => result.current.setPage(2))
     act(() => result.current.selectGenre('Drama'))
-
-    expect(result.current.page).toBe(1)
-    expect(result.current.visibleShows.map((s) => s.id)).toEqual([1, 3, 4])
-    expect(result.current.resultsLabel).toBe('3 Drama of 4 shows')
+    act(() => result.current.setPage(2))
+    expect(lastRequest()).toEqual({ query: 'murder', genre: 'Drama', page: 2 })
 
     act(() => result.current.resetGenre())
-    expect(result.current.selectedGenre).toBeNull()
+    expect(lastRequest()).toEqual({ query: 'murder', genre: null, page: 1 })
   })
 
-  it('picks the view for empty, stale and failed searches', () => {
+  it('refreshes without "searching" while another page of it loads', () => {
+    mockPage({ status: 'loading' })
+    window.history.replaceState(null, '', '/?q=murder')
+    const { result } = renderHook(() => usePresenter())
+
+    expect(result.current.isRefreshing).toBe(true)
+    expect(result.current.isSearching).toBe(false)
+  })
+
+  it('picks the view for empty and failed searches', () => {
     window.history.replaceState(null, '', '/?q=zxqv')
-    mockSearch({ shows: [] })
+    mockPage({ data: { ...PAGE, query: 'zxqv', totalCount: 0, items: [] } })
     const { result, rerender } = renderHook(() => usePresenter())
     expect(result.current.view).toBe('empty')
     expect(result.current.errorMessage).toBeNull()
-    mockSearch({ status: 'loading' })
-    rerender()
-    expect(result.current.isRefreshing).toBe(true)
-    mockSearch({ status: 'error', shows: [], error: 'Failed' })
+
+    mockPage({ status: 'error', data: null, error: 'Failed' })
     rerender()
     expect(result.current.view).toBe('error')
     expect(result.current.errorMessage).toBe(
-      'TVmaze didn’t respond. Check your connection and try again.',
+      'Couldn’t load the shows. Check your connection and try again.',
     )
     expect(result.current.retry).toBe(retry)
   })

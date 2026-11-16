@@ -1,25 +1,16 @@
-export type ShowImage = {
-  medium: string
-  original: string
-}
+// The server owns the API contract; the app imports its types from here.
+export type {
+  ApiError,
+  Channel,
+  GenreOption,
+  Show,
+  ShowImage,
+  ShowsPage,
+} from '../../server/src/contract'
 
-export type Channel = {
-  name: string
-}
-
-export type Show = {
-  id: number
-  name: string
-  genres: string[]
-  status: string
-  premiered: string | null
-  network: Channel | null
-  webChannel: Channel | null
-  image: ShowImage | null
-  summary: string | null
-}
-
-export type SearchResult = {
-  score: number
-  show: Show
+/** What the app asks the API for: `GET /shows?q=&genre=&page=`. */
+export type ShowsPageRequest = {
+  query: string
+  genre: string | null
+  page: number
 }

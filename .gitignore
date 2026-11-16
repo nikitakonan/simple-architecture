@@ -26,3 +26,6 @@ dist-ssr
 # Cloudflare Wrangler local state
 .wrangler
 .dev.vars*
+
+# Local environment (copy .env.example to .env)
+.env

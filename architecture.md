@@ -16,14 +16,14 @@ pattern, and to keep business rules separate from React:
 ```
 src/
 ├── api/                      # Model: HTTP client and API types
-│   ├── tvmaze.ts
-│   └── types.ts
-├── hooks/                    # Reusable non-UI hooks (useDebounce, useShowSearch, ...)
+│   ├── shows.ts              # client for the API server in server/
+│   └── types.ts              # re-exports the server's contract types
+├── hooks/                    # Reusable non-UI hooks (useDebounce, useShowsPage, ...)
 │   ├── useDebounce.ts
 │   └── useDebounce.test.ts
 ├── tasks/                    # Business tasks shared by more than one component or hook
-│   ├── findShows.ts
-│   └── findShows.test.ts
+│   ├── findShowsPage.ts
+│   └── findShowsPage.test.ts
 ├── ui/                       # App-wide UI primitives that know nothing about the domain
 │   ├── Button/
 │   ├── Chip/
@@ -39,15 +39,13 @@ src/
 │       │   ├── usePresenter.ts
 │       │   ├── usePresenter.test.ts
 │       │   ├── useSearchParam.ts     # local hooks used only by this presenter
-│       │   ├── useGenreFilter.ts
-│       │   ├── useGenreFilter.test.ts
-│       │   ├── usePagination.ts
-│       │   ├── usePagination.test.ts
+│       │   ├── useBrowseState.ts
+│       │   ├── useBrowseState.test.ts
 │       │   └── tasks/                # business logic: plain TS, no React
-│       │       ├── countGenres.ts
-│       │       ├── countGenres.test.ts
-│       │       ├── filterByGenre.ts
-│       │       └── filterByGenre.test.ts
+│       │       ├── describeResults.ts
+│       │       ├── describeResults.test.ts
+│       │       ├── getHomeView.ts
+│       │       └── getHomeView.test.ts
 │       ├── Header/               # used once by HomePage: its own folder, next to the parent
 │       │   ├── index.tsx
 │       │   ├── Header.module.css
@@ -120,7 +118,7 @@ import { Chip } from '../../ui/Chip'
 
 // ❌ bad: reaches into another component's internals
 import { usePresenter } from './pages/HomePage/logic/usePresenter'
-import { countGenres } from './pages/HomePage/logic/tasks/countGenres'
+import { describeResults } from './pages/HomePage/logic/tasks/describeResults'
 import styles from '../../ui/Chip/Chip.module.css'
 ```
 
@@ -201,79 +199,75 @@ declare the props type in `logic/usePresenter.ts` and call
 ### Example: HomePage
 
 ```ts
-// src/pages/HomePage/logic/usePresenter.ts
+// src/pages/HomePage/logic/usePresenter.ts (simplified)
 import { useDebounce } from '../../../hooks/useDebounce'
-import { useShowSearch } from '../../../hooks/useShowSearch'
+import { useShowsPage } from '../../../hooks/useShowsPage'
 
-import { useGenreFilter } from './useGenreFilter'
-import { usePagination } from './usePagination'
+import { describeResults } from './tasks/describeResults'
+import { useBrowseState } from './useBrowseState'
 import { useSearchParam } from './useSearchParam'
-
-const PAGE_SIZE = 3
 
 export function usePresenter() {
   const [query, setQuery] = useSearchParam('q') // local: syncs with ?q= in the URL
   const debouncedQuery = useDebounce(query, 400) // shared
-  const { shows, status, error } = useShowSearch(debouncedQuery) // shared
 
-  // local: holds the selected genre and calls the countGenres and
-  // filterByGenre tasks; resets the selection when `shows` changes
-  const { genres, selectedGenre, selectGenre, filteredShows } =
-    useGenreFilter(shows)
+  // local: the selected genre and page; both reset when the query changes
+  const { genre, page, selectGenre, setPage } = useBrowseState(debouncedQuery)
 
-  // local: goes back to page 1 whenever `filteredShows` changes
-  const { page, pageCount, setPage, pageItems } = usePagination(
-    filteredShows,
-    PAGE_SIZE,
-  )
+  // shared: loads one page from the API server, which filters and paginates
+  const { data, status, retry } = useShowsPage({
+    query: debouncedQuery,
+    genre,
+    page,
+  })
 
   return {
     query,
     changeQuery: setQuery,
-    genres,
-    selectedGenre,
+    genres: data?.genres ?? [],
+    selectedGenre: genre,
     selectGenre,
-    visibleShows: pageItems,
+    resultsLabel: describeResults({ // task: "4 Drama of 12 shows"
+      total: data?.totalCount ?? 0,
+      filtered: data?.matchCount ?? 0,
+      genre: data?.genre ?? null,
+    }),
+    visibleShows: data?.items ?? [],
     page,
-    pageCount,
+    pageCount: data?.pageCount ?? 1,
     setPage,
     status,
-    error,
+    retry,
   }
 }
 ```
 
 The presenter reads like a summary of the page's behaviour: each step is a
 small hook in `logic/` or in `src/hooks/`, and the rules behind each step are
-tasks in `logic/tasks/`. A local hook keeps the React state and leaves the
-business rule to a task:
+tasks in `logic/tasks/`. A local hook keeps the React state:
 
 ```ts
-// src/pages/HomePage/logic/useGenreFilter.ts
-import { useMemo, useState } from 'react'
+// src/pages/HomePage/logic/useBrowseState.ts
+import { useCallback, useState } from 'react'
 
-import type { Show } from '../../../api/types'
+export function useBrowseState(query: string) {
+  const [genre, setGenre] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [prevQuery, setPrevQuery] = useState(query)
 
-import { countGenres } from './tasks/countGenres'
-import { filterByGenre } from './tasks/filterByGenre'
-
-export function useGenreFilter(shows: Show[]) {
-  const [selectedGenre, selectGenre] = useState<string | null>(null)
-  const [prevShows, setPrevShows] = useState(shows)
-
-  // A new search clears the selection.
-  if (shows !== prevShows) {
-    setPrevShows(shows)
-    selectGenre(null)
+  // A new search starts again from all genres and the first page.
+  if (query !== prevQuery) {
+    setPrevQuery(query)
+    setGenre(null)
+    setPage(1)
   }
 
-  const genres = useMemo(() => countGenres(shows), [shows])
-  const filteredShows = useMemo(
-    () => filterByGenre(shows, selectedGenre),
-    [shows, selectedGenre],
-  )
+  const selectGenre = useCallback((next: string | null) => {
+    setGenre(next)
+    setPage(1)
+  }, [])
 
-  return { genres, selectedGenre, selectGenre, filteredShows }
+  return { genre, page, selectGenre, setPage }
 }
 ```
 
@@ -432,15 +426,15 @@ limit, split it:
 A presenter can import:
 
 - **Local hooks from its own `logic/` folder**: `HomePage/logic/useSearchParam.ts`,
-  `HomePage/logic/useGenreFilter.ts`. Use these for React logic that belongs
+  `HomePage/logic/useBrowseState.ts`. Use these for React logic that belongs
   to this component only.
-- **Shared hooks from `src/hooks/`**: `useDebounce`, `useShowSearch`. Use these
+- **Shared hooks from `src/hooks/`**: `useDebounce`, `useShowsPage`. Use these
   for React logic that more than one component needs.
 
 Rules for local hooks:
 
 - Each local hook is one file in `logic/` named after the hook
-  (`useGenreFilter.ts`), with its own `useGenreFilter.test.ts` when it has
+  (`useBrowseState.ts`), with its own `useBrowseState.test.ts` when it has
   logic worth testing.
 - Only the presenter of the same `logic/` folder (or another local hook in it)
   imports a local hook. The view never calls them, and other folders never
@@ -543,21 +537,15 @@ shapes; the task never imports them. Concrete implementations live in
 Many tasks have no dependencies at all; they take data and return data:
 
 ```ts
-// src/pages/HomePage/logic/tasks/countGenres.ts
-import type { Show } from '../../../../api/types'
+// src/pages/HomePage/logic/tasks/describeResults.ts
+type ResultsInput = { total: number; filtered: number; genre: string | null }
 
-export type GenreOption = { name: string; count: number }
-
-export function countGenres(shows: Show[]): GenreOption[] {
-  const counts = new Map<string, number>()
-  for (const show of shows) {
-    for (const genre of show.genres) {
-      counts.set(genre, (counts.get(genre) ?? 0) + 1)
-    }
-  }
-  return [...counts]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+/** "12 shows", or "4 Drama of 12 shows" when a genre is selected. */
+export function describeResults({ total, filtered, genre }: ResultsInput) {
+  const showsWord = total === 1 ? 'show' : 'shows'
+  return genre
+    ? `${filtered} ${genre} of ${total} ${showsWord}`
+    : `${total} ${showsWord}`
 }
 ```
 
@@ -572,43 +560,47 @@ export function countGenres(shows: Show[]): GenreOption[] {
 - Shared tasks are imported by presenters, local hooks, shared hooks, and
   other tasks. Views, `ui/`, and `api/` never import them.
 
-`findShows` is a shared task. It declares the search it needs as a type and
-never imports the TVmaze client:
+`findShowsPage` is a shared task. It declares the request function it needs
+as a type and never imports the API client:
 
 ```ts
-// src/tasks/findShows.ts
-import type { SearchResult, Show } from '../api/types'
+// src/tasks/findShowsPage.ts
+import type { ShowsPage, ShowsPageRequest } from '../api/types'
 
-/** Anything that can search shows: the TVmaze client, a fake in tests. */
-export type SearchShows = (
-  query: string,
+/** Anything that can load a page of shows: the API client, a fake in tests. */
+export type FetchShowsPage = (
+  request: ShowsPageRequest,
   signal?: AbortSignal,
-) => Promise<SearchResult[]>
+) => Promise<ShowsPage>
 
-export type FindShowsDeps = {
-  search: SearchShows
+export type FindShowsPageDeps = {
+  fetchPage: FetchShowsPage
   signal?: AbortSignal
 }
 
-/** Shows matching `query`, in the order the search ranks them. */
-export async function findShows(
-  query: string,
-  { search, signal }: FindShowsDeps,
-): Promise<Show[]> {
-  const results = await search(query, signal)
-  return results.map((result) => result.show)
+/** One page of shows for `request`, with blank parts normalised first. */
+export function findShowsPage(
+  { query, genre, page }: ShowsPageRequest,
+  { fetchPage, signal }: FindShowsPageDeps,
+): Promise<ShowsPage> {
+  const normalized = {
+    query: query.trim(),
+    genre: genre?.trim() || null,
+    page: Math.max(1, Math.floor(page)),
+  }
+  return fetchPage(normalized, signal)
 }
 ```
 
-The shared hook `useShowSearch` passes in the real client and keeps the React
+The shared hook `useShowsPage` passes in the real client and keeps the React
 side (the `AbortController`, the loading and error state, retries):
 
 ```ts
-// src/hooks/useShowSearch.ts (excerpt)
-import { searchShows } from '../api/tvmaze'
-import { findShows } from '../tasks/findShows'
+// src/hooks/useShowsPage.ts (excerpt)
+import { fetchShowsPage } from '../api/shows'
+import { findShowsPage } from '../tasks/findShowsPage'
 
-findShows(trimmed, { search: searchShows, signal: controller.signal })
+findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
 ```
 
 ## 7. Model layer: `api/` and `hooks/`
@@ -618,29 +610,29 @@ findShows(trimmed, { search: searchShows, signal: controller.signal })
   request function accepts an `AbortSignal` so callers can cancel it.
 
   ```ts
-  // src/api/tvmaze.ts
-  import type { SearchResult } from './types'
+  // src/api/shows.ts (simplified)
+  import type { ShowsPage, ShowsPageRequest } from './types'
 
-  const BASE_URL = 'https://api.tvmaze.com'
-
-  export async function searchShows(
-    query: string,
+  export async function fetchShowsPage(
+    { query, genre, page }: ShowsPageRequest,
     signal?: AbortSignal,
-  ): Promise<SearchResult[]> {
+  ): Promise<ShowsPage> {
+    const params = new URLSearchParams({ q: query, page: String(page) })
+    if (genre) params.set('genre', genre)
     const response = await fetch(
-      `${BASE_URL}/search/shows?q=${encodeURIComponent(query)}`,
+      `${import.meta.env.VITE_API_URL}/shows?${params}`,
       { signal },
     )
     if (!response.ok) {
-      throw new Error(`TVmaze request failed: ${response.status}`)
+      throw new Error(`API request failed: ${response.status}`)
     }
     return response.json()
   }
   ```
 
 - `src/hooks/` holds reusable hooks that aren't tied to one view:
-  `useDebounce`, and `useShowSearch`, which runs the `findShows` task with
-  the TVmaze client, an `AbortController`, and the loading, error, and success
+  `useDebounce`, and `useShowsPage`, which runs the `findShowsPage` task with
+  the API client, an `AbortController`, and the loading, error, and success
   states. Presenters use these hooks; views never import them. A shared hook
   may call tasks from `src/tasks/`, but never tasks from a component's
   `logic/tasks/`.
@@ -674,8 +666,8 @@ pages  →  components  →  ui
   It never imports from `hooks/`, `tasks/`, or `api/` (type-only imports of API
   types for props are fine), and never imports local hooks or tasks from its
   own `logic/` folder.
-- Local hooks (`HomePage/logic/usePagination.ts`) and tasks
-  (`HomePage/logic/tasks/countGenres.ts`) are imported only from inside the
+- Local hooks (`HomePage/logic/useBrowseState.ts`) and tasks
+  (`HomePage/logic/tasks/describeResults.ts`) are imported only from inside the
   same `logic/` folder.
 
 ## 9. Tests

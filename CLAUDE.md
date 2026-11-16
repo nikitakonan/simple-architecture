@@ -27,17 +27,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is being built
 
-"TV Shows Explorer" is a small React app that searches TV shows through the public TVmaze API.
+"TV Shows Explorer" is a small React app that searches TV shows through the public TVmaze API, via its own API server in `server/`.
 
-- **Search:** `GET https://api.tvmaze.com/search/shows?q=<query>`. The API does the filtering by query. The response is an array of `{ score, show }`, and genres are in `show.genres`.
+- **Search:** the app calls `GET ${VITE_API_URL}/shows?q=&genre=&page=` (`src/api/shows.ts`); the server calls TVmaze's `GET https://api.tvmaze.com/search/shows?q=<query>`, which returns `{ score, show }[]`.
 - **Initial state:** an empty list and a search field only.
-- **Pagination:** client-side, **3 items per page**, with controls to switch pages.
-- **Genre filter:** collect the unique genres from the current search results and show them as clickable chips above the list. Selecting a chip filters the list to shows with that genre, and there must be a way to reset the filter. Pagination applies to the filtered list.
+- **Pagination:** **3 items per page**, done on the server; the client keeps the selected page.
+- **Genre filter:** collect the unique genres from the current search results and show them as clickable chips above the list. Selecting a chip filters the list to shows with that genre, and there must be a way to reset the filter. Pagination applies to the filtered list. The server returns the genre counts over all results, filters, and paginates.
 
 ## Requirements to keep in mind
 
-- **UX is graded:** debounce input instead of sending a request on every keystroke, cancel in-flight requests when the query changes (for example with `AbortController`), and handle loading, error, and empty states explicitly.
+- **UX is graded:** debounce input instead of sending a request on every keystroke, cancel in-flight requests when the query, genre or page changes (for example with `AbortController`), and handle loading, error, and empty states explicitly.
 - **Stretch goal:** implement the data-fetching layer by hand, without `useQuery` (TanStack Query). Don't add react-query unless the user asks for it.
 - **Design is free-form:** there is no mockup, and a polished, original UI is encouraged.
-- **Backend:** `server/` is a Cloudflare Worker (Hono) that serves `GET /shows?q=&genre=&page=`: it calls TVmaze and does the genre filtering and pagination. Its response types are in `server/src/contract.ts`. Inside it, `app.ts` is HTTP only, `tasks/` holds plain TS that receives its dependencies as arguments (enforced by Biome), and `index.ts` wires in the real implementations.
+- **Backend:** `server/` is a Cloudflare Worker (Hono) that serves `GET /shows?q=&genre=&page=`: it calls TVmaze and does the genre filtering and pagination. Its response types are in `server/src/contract.ts`; the frontend re-exports them from `src/api/types.ts`, so change both sides together. The frontend needs `VITE_API_URL`: locally from the git-ignored `.env` (template: `.env.example`), in CI from the env of the build step in `.github/workflows/deploy.yml`. Inside it, `app.ts` is HTTP only, `tasks/` holds plain TS that receives its dependencies as arguments (enforced by Biome), and `index.ts` wires in the real implementations.
 - The repo is named "simple-architecture", so keep a clear separation between the API client, the data-fetching/state logic (hooks), and presentational components.
