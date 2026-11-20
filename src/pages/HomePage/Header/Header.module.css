@@ -30,6 +30,12 @@
   letter-spacing: -0.01em;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .credit {
   font-size: 14px;
   color: var(--color-text-muted);

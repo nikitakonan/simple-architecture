@@ -16,23 +16,42 @@ const show: Show = {
   summary: null,
 }
 
+const props = {
+  show,
+  isFavorite: true,
+  isSavingFavorite: false,
+  onToggleFavorite: vi.fn(),
+}
+
 describe('ShowCard usePresenter', () => {
   it('returns the show formatted for the card', () => {
-    const { result } = renderHook(() => usePresenter({ show }))
+    const { result } = renderHook(() => usePresenter(props))
 
-    expect(result.current).toMatchObject({
+    expect(result.current.card).toMatchObject({
       name: 'The Office',
       meta: '2005 · Peacock',
       summary: '',
       imageUrl: 'https://example.com/o.jpg',
     })
+    expect(result.current.favoriteLabel).toBe(
+      'Favorite The Office (2005 · Peacock)',
+    )
+    expect(result.current.isFavorite).toBe(true)
   })
 
-  it('keeps the same result while the show does not change', () => {
-    const { result, rerender } = renderHook(() => usePresenter({ show }))
-    const first = result.current
+  it('toggles this show as a favorite', () => {
+    const { result } = renderHook(() => usePresenter(props))
+
+    result.current.toggleFavorite()
+
+    expect(props.onToggleFavorite).toHaveBeenCalledWith(show)
+  })
+
+  it('keeps the same card while the show does not change', () => {
+    const { result, rerender } = renderHook(() => usePresenter(props))
+    const first = result.current.card
 
     rerender()
-    expect(result.current).toBe(first)
+    expect(result.current.card).toBe(first)
   })
 })

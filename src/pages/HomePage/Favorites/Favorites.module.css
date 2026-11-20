@@ -1,0 +1,36 @@
+.root {
+  position: relative;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-size);
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button svg {
+  color: var(--color-accent);
+}
+
+.button:hover,
+.button[aria-expanded="true"] {
+  border-color: var(--color-accent);
+}
+
+.count {
+  min-width: 24px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}

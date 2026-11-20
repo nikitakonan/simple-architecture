@@ -1,58 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import type { Show } from '../../api/types'
-
-import { usePresenter } from './logic/usePresenter'
-
-import { HomePage } from '.'
+import { renderWith, show } from './HomePage.testUtils'
 
 vi.mock('./logic/usePresenter')
-
-type Presenter = ReturnType<typeof usePresenter>
-
-const show: Show = {
-  id: 1,
-  name: 'Midsomer Murders',
-  genres: ['Drama', 'Crime'],
-  status: 'Running',
-  premiered: '1997-03-23',
-  network: { name: 'ITV' },
-  webChannel: null,
-  image: null,
-  summary: '<p>Detectives solve murders in English villages.</p>',
-}
-
-const base: Presenter = {
-  query: '',
-  changeQuery: vi.fn(),
-  clearQuery: vi.fn(),
-  isSearching: false,
-  view: 'idle',
-  isRefreshing: false,
-  searchedFor: '',
-  errorMessage: null,
-  retry: vi.fn(),
-  suggestions: ['murder', 'office'],
-  genres: [],
-  selectedGenre: null,
-  selectGenre: vi.fn(),
-  resetGenre: vi.fn(),
-  totalCount: 0,
-  resultsLabel: '',
-  visibleShows: [],
-  page: 1,
-  pageCount: 1,
-  setPage: vi.fn(),
-  rangeLabel: '',
-}
-
-function renderWith(overrides: Partial<Presenter>) {
-  const presenter = { ...base, ...overrides }
-  vi.mocked(usePresenter).mockReturnValue(presenter)
-  render(<HomePage />)
-  return presenter
-}
 
 describe('HomePage', () => {
   it('starts with the search field and sends input to the presenter', async () => {
@@ -69,7 +20,7 @@ describe('HomePage', () => {
   it('shows placeholders while loading', () => {
     renderWith({ query: 'mur', view: 'loading', isSearching: true })
     expect(screen.getByLabelText('Loading results')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Searching…')
+    expect(screen.getByText('Searching…')).toBeInTheDocument()
   })
 
   it('shows the error with a retry button', async () => {

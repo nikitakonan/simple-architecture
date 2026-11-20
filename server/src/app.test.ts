@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createApp } from './app'
 import type { ShowsPage } from './contract'
+import { createMemoryFavorites } from './favorites/memoryFavorites'
 import type { TvmazeSearchResult, TvmazeShow } from './tvmaze/types'
 
 const ENV = {
@@ -21,7 +22,11 @@ const RESULTS = [
 ]
 
 function setup(search = vi.fn().mockResolvedValue(RESULTS)) {
-  const app = createApp({ search })
+  const app = createApp({
+    search,
+    favorites: createMemoryFavorites(),
+    lookupShow: vi.fn(),
+  })
   const get = (path: string, headers?: HeadersInit) =>
     app.request(path, { headers }, ENV)
   return { get, search }

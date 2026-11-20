@@ -5,13 +5,14 @@ import { browseShows, type SearchShows } from './tasks/browseShows'
 import { parseShowsQuery } from './tasks/parseShowsQuery'
 
 import type { ApiError, ShowsPage } from './contract'
+import { type FavoritesDeps, favoritesRoutes } from './favoritesRoutes'
 
 export type Env = {
   /** Comma-separated origins allowed to call the API from a browser. */
   ALLOWED_ORIGINS?: string
 }
 
-export type AppDeps = {
+export type AppDeps = FavoritesDeps & {
   search: SearchShows
 }
 
@@ -28,7 +29,7 @@ function parseOrigins(value = ''): string[] {
 }
 
 /** The HTTP layer: routing, CORS, validation and status codes. */
-export function createApp({ search }: AppDeps) {
+export function createApp({ search, ...favoritesDeps }: AppDeps) {
   const app = new Hono<{ Bindings: Env }>()
 
   app.use(
@@ -36,7 +37,7 @@ export function createApp({ search }: AppDeps) {
     cors({
       origin: (origin, c) =>
         parseOrigins(c.env?.ALLOWED_ORIGINS).includes(origin) ? origin : null,
-      allowMethods: ['GET'],
+      allowMethods: ['GET', 'PUT', 'DELETE'],
     }),
   )
 
@@ -60,6 +61,8 @@ export function createApp({ search }: AppDeps) {
       return c.json(body satisfies ApiError, 502)
     }
   })
+
+  app.route('/favorites', favoritesRoutes(favoritesDeps))
 
   app.notFound((c) => c.json({ error: 'Not found.' } satisfies ApiError, 404))
 

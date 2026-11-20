@@ -1,6 +1,6 @@
 /**
- * The public contract of the API: what `GET /shows` returns. The frontend
- * relies on these types, so change them together with it.
+ * The public contract of the API: what `GET /shows` and `/favorites` return.
+ * The frontend relies on these types, so change them together with it.
  */
 
 export type ShowImage = {
@@ -46,6 +46,15 @@ export type ShowsPage = {
   pageSize: number
   /** Index of the first item of this page among the matching results. */
   firstIndex: number
+  items: Show[]
+}
+
+/**
+ * `GET /favorites`. `PUT /favorites/:id` and `DELETE /favorites/:id` answer
+ * with the updated list too, so the client never has to work it out itself.
+ */
+export type Favorites = {
+  /** The favorite shows, sorted by name. */
   items: Show[]
 }
 

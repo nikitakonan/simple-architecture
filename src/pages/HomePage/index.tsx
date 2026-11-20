@@ -1,6 +1,8 @@
 import { ErrorState } from '../../components/ErrorState'
+import { Toast } from '../../ui/Toast'
 
 import { EmptyState } from './EmptyState'
+import { Favorites } from './Favorites'
 import { GenreFilter } from './GenreFilter'
 import { Header } from './Header'
 import { IdleState } from './IdleState'
@@ -14,11 +16,17 @@ import styles from './HomePage.module.css'
 
 export function HomePage() {
   const presenter = usePresenter()
-  const { view } = presenter
+  const { view, favorites } = presenter
 
   return (
     <div className={styles.page}>
-      <Header />
+      <Header>
+        <Favorites
+          items={favorites.items}
+          isSaving={favorites.isSaving}
+          onToggle={favorites.toggle}
+        />
+      </Header>
       <main className={styles.main}>
         <SearchField
           query={presenter.query}
@@ -60,7 +68,13 @@ export function HomePage() {
             >
               <ul className={styles.list}>
                 {presenter.visibleShows.map((show) => (
-                  <ShowCard key={show.id} show={show} />
+                  <ShowCard
+                    key={show.id}
+                    show={show}
+                    isFavorite={favorites.isFavorite(show.id)}
+                    isSavingFavorite={favorites.isSaving(show.id)}
+                    onToggleFavorite={favorites.toggle}
+                  />
                 ))}
               </ul>
               <Pagination
@@ -73,6 +87,10 @@ export function HomePage() {
           </>
         )}
       </main>
+      <Toast
+        message={presenter.toast?.text ?? null}
+        messageId={presenter.toast?.id}
+      />
     </div>
   )
 }

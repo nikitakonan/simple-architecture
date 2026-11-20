@@ -1,6 +1,13 @@
+import type { ReactNode } from 'react'
+
 import styles from './Header.module.css'
 
-export function Header() {
+type HeaderProps = {
+  /** Controls shown on the right, next to the credit link. */
+  children?: ReactNode
+}
+
+export function Header({ children }: HeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
@@ -22,14 +29,17 @@ export function Header() {
         </span>
         <span className={styles.name}>TV Shows Explorer</span>
       </div>
-      <a
-        className={styles.credit}
-        href="https://www.tvmaze.com/api"
-        target="_blank"
-        rel="noreferrer"
-      >
-        Data from TVmaze
-      </a>
+      <div className={styles.actions}>
+        <a
+          className={styles.credit}
+          href="https://www.tvmaze.com/api"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Data from TVmaze
+        </a>
+        {children}
+      </div>
     </header>
   )
 }

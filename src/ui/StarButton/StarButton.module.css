@@ -1,0 +1,46 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: rgb(15 17 21 / 80%);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.button:active {
+  transform: scale(0.92);
+}
+
+.star {
+  fill: none;
+  transition: fill 120ms ease;
+}
+
+.button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.button[aria-pressed="true"] .star {
+  fill: currentColor;
+}
+
+/* Saving: the star waits for the server, so it can't be clicked again. */
+.button[aria-busy="true"] {
+  cursor: progress;
+  opacity: 0.6;
+}

@@ -1,4 +1,5 @@
 import type { Show } from '../../../../../api/types'
+import { describeShowMeta } from '../../../../../tasks/describeShowMeta'
 
 /** Everything a show card renders, already formatted. */
 export type ShowView = {
@@ -32,12 +33,10 @@ function getInitials(name: string): string {
 }
 
 export function formatShow(show: Show): ShowView {
-  const year = show.premiered?.slice(0, 4)
-  const channel = show.network?.name ?? show.webChannel?.name
   return {
     id: show.id,
     name: show.name,
-    meta: [year, channel].filter(Boolean).join(' · '),
+    meta: describeShowMeta(show),
     status: show.status,
     genres: show.genres,
     summary: show.summary ? stripHtml(show.summary) : '',

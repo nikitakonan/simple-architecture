@@ -63,6 +63,12 @@
   font-weight: 500;
 }
 
+.favorite {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
 .heading,
 .genres,
 .summary {

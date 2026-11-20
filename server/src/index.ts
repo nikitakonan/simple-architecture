@@ -2,7 +2,8 @@ import { cachedSearch } from './tasks/cachedSearch'
 
 import { createApp } from './app'
 import { createMemoryCache } from './cache/memoryCache'
-import { searchTvmaze } from './tvmaze/client'
+import { createMemoryFavorites } from './favorites/memoryFavorites'
+import { lookupTvmazeShow, searchTvmaze } from './tvmaze/client'
 import type { TvmazeSearchResult } from './tvmaze/types'
 
 // The Worker entry point: wires the real implementations into the app.
@@ -14,4 +15,9 @@ const cache = createMemoryCache<TvmazeSearchResult[]>({
   maxEntries: 200,
 })
 
-export default createApp({ search: cachedSearch(searchTvmaze, cache) })
+export default createApp({
+  search: cachedSearch(searchTvmaze, cache),
+  // One list for everyone, in memory: it is lost when the instance restarts.
+  favorites: createMemoryFavorites(),
+  lookupShow: lookupTvmazeShow,
+})

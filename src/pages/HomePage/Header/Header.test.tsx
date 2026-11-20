@@ -11,4 +11,14 @@ describe('Header', () => {
       screen.getByRole('link', { name: 'Data from TVmaze' }),
     ).toHaveAttribute('href', 'https://www.tvmaze.com/api')
   })
+
+  it('renders the controls it is given', () => {
+    render(
+      <Header>
+        <button type="button">Favorites</button>
+      </Header>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Favorites' })).toBeVisible()
+  })
 })

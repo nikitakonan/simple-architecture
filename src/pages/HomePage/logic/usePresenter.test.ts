@@ -6,6 +6,7 @@ import { useShowsPage } from '../../../hooks/useShowsPage'
 import { usePresenter } from './usePresenter'
 
 vi.mock('../../../hooks/useShowsPage')
+vi.mock('./useFavorites')
 vi.mock('../../../hooks/useDebounce', () => ({
   useDebounce: <T>(value: T) => value,
 }))
@@ -23,9 +24,7 @@ const PAGE: ShowsPage = {
   pageCount: 2,
   pageSize: 3,
   firstIndex: 3,
-  items: [
-    { id: 7, name: 'Show 7', genres: ['Drama'] } as ShowsPage['items'][0],
-  ],
+  items: [{ id: 7, name: 'Show 7', genres: ['Drama'] }] as ShowsPage['items'],
 }
 
 type Result = ReturnType<typeof useShowsPage>

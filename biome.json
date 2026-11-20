@@ -235,7 +235,14 @@
                 },
                 "patterns": [
                   {
-                    "group": ["hono/**", "../app", "../cache/**", "../index"],
+                    "group": [
+                      "hono/**",
+                      "../app",
+                      "../cache/**",
+                      "../favorites/**",
+                      "../favoritesRoutes",
+                      "../index"
+                    ],
                     "message": "Tasks get their dependencies as arguments."
                   },
                   {

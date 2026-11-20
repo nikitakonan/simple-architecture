@@ -2,6 +2,7 @@
 export type {
   ApiError,
   Channel,
+  Favorites,
   GenreOption,
   Show,
   ShowImage,

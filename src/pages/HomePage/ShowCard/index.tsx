@@ -1,41 +1,51 @@
+import { StarButton } from '../../../ui/StarButton'
+
 import { type ShowCardProps, usePresenter } from './logic/usePresenter'
 
 import styles from './ShowCard.module.css'
 
 export function ShowCard(props: ShowCardProps) {
-  const show = usePresenter(props)
+  const { card, ...favorite } = usePresenter(props)
 
   return (
     <li className={styles.card}>
-      <div className={styles.poster} data-tone={show.tone}>
-        {show.imageUrl ? (
+      <div className={styles.poster} data-tone={card.tone}>
+        {card.imageUrl ? (
           <img
             className={styles.image}
-            src={show.imageUrl}
+            src={card.imageUrl}
             alt=""
             loading="lazy"
           />
         ) : (
           <span className={styles.initials} aria-hidden="true">
-            {show.initials}
+            {card.initials}
           </span>
         )}
-        {show.status && <span className={styles.status}>{show.status}</span>}
+        {card.status && <span className={styles.status}>{card.status}</span>}
+        <span className={styles.favorite}>
+          <StarButton
+            label={favorite.favoriteLabel}
+            pressed={favorite.isFavorite}
+            busy={favorite.isSavingFavorite}
+            onClick={favorite.toggleFavorite}
+          />
+        </span>
       </div>
       <div className={styles.heading}>
-        <h2 className={styles.name}>{show.name}</h2>
-        {show.meta && <p className={styles.meta}>{show.meta}</p>}
+        <h2 className={styles.name}>{card.name}</h2>
+        {card.meta && <p className={styles.meta}>{card.meta}</p>}
       </div>
-      {show.genres.length > 0 && (
+      {card.genres.length > 0 && (
         <ul className={styles.genres} aria-label="Genres">
-          {show.genres.map((genre) => (
+          {card.genres.map((genre) => (
             <li key={genre} className={styles.genre}>
               {genre}
             </li>
           ))}
         </ul>
       )}
-      {show.summary && <p className={styles.summary}>{show.summary}</p>}
+      {card.summary && <p className={styles.summary}>{card.summary}</p>}
     </li>
   )
 }
