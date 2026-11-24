@@ -6,7 +6,7 @@ import { useShowsPage } from '../../../hooks/useShowsPage'
 import { usePresenter } from './usePresenter'
 
 vi.mock('../../../hooks/useShowsPage')
-vi.mock('./useFavorites')
+vi.mock('../../../api/favorites')
 vi.mock('../../../hooks/useDebounce', () => ({
   useDebounce: <T>(value: T) => value,
 }))

@@ -2,8 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import type { Show } from '../../../api/types'
+import { toggleFavorite } from '../../../services/favorites'
+import { favoritesStore } from '../../../stores/favoritesStore'
 
 import { ShowCard } from '.'
+
+vi.mock('../../../services/favorites')
 
 const show: Show = {
   id: 7,
@@ -18,16 +22,8 @@ const show: Show = {
 }
 
 function renderCard(isFavorite = false) {
-  const onToggleFavorite = vi.fn()
-  render(
-    <ShowCard
-      show={show}
-      isFavorite={isFavorite}
-      isSavingFavorite={false}
-      onToggleFavorite={onToggleFavorite}
-    />,
-  )
-  return onToggleFavorite
+  favoritesStore.setState({ items: isFavorite ? [show] : [] })
+  render(<ShowCard show={show} />)
 }
 
 describe('ShowCard', () => {
@@ -46,13 +42,13 @@ describe('ShowCard', () => {
   })
 
   it('has a star that toggles the show as a favorite', async () => {
-    const onToggleFavorite = renderCard(true)
+    renderCard(true)
 
     const star = screen.getByRole('button', {
       name: 'Favorite Murder, She Wrote (1984 · CBS)',
     })
     expect(star).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(star)
-    expect(onToggleFavorite).toHaveBeenCalledWith(show)
+    expect(toggleFavorite).toHaveBeenCalledWith(show)
   })
 })

@@ -1,10 +1,10 @@
 import { FavoritesPanel } from './FavoritesPanel'
-import { type FavoritesProps, usePresenter } from './logic/usePresenter'
+import { usePresenter } from './logic/usePresenter'
 
 import styles from './Favorites.module.css'
 
-export function Favorites(props: FavoritesProps) {
-  const favorites = usePresenter(props)
+export function Favorites() {
+  const favorites = usePresenter()
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: Escape from inside closes the panel

@@ -16,16 +16,12 @@ import styles from './HomePage.module.css'
 
 export function HomePage() {
   const presenter = usePresenter()
-  const { view, favorites } = presenter
+  const { view } = presenter
 
   return (
     <div className={styles.page}>
       <Header>
-        <Favorites
-          items={favorites.items}
-          isSaving={favorites.isSaving}
-          onToggle={favorites.toggle}
-        />
+        <Favorites />
       </Header>
       <main className={styles.main}>
         <SearchField
@@ -68,13 +64,7 @@ export function HomePage() {
             >
               <ul className={styles.list}>
                 {presenter.visibleShows.map((show) => (
-                  <ShowCard
-                    key={show.id}
-                    show={show}
-                    isFavorite={favorites.isFavorite(show.id)}
-                    isSavingFavorite={favorites.isSaving(show.id)}
-                    onToggleFavorite={favorites.toggle}
-                  />
+                  <ShowCard key={show.id} show={show} />
                 ))}
               </ul>
               <Pagination

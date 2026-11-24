@@ -44,12 +44,6 @@ export const base: Presenter = {
   pageCount: 1,
   setPage: vi.fn(),
   rangeLabel: '',
-  favorites: {
-    items: [],
-    isFavorite: () => false,
-    isSaving: () => false,
-    toggle: vi.fn(),
-  },
   toast: null,
 }
 

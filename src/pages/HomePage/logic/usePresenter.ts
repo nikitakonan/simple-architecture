@@ -1,14 +1,16 @@
+import { useEffect } from 'react'
+
 import type { ShowsPage } from '../../../api/types'
 import { useDebounce } from '../../../hooks/useDebounce'
 import { useShowsPage } from '../../../hooks/useShowsPage'
+import { useToast } from '../../../hooks/useToast'
+import { loadFavorites } from '../../../services/favorites'
 import { describeRange } from './tasks/describeRange'
 import { describeResults } from './tasks/describeResults'
 import { getHomeView } from './tasks/getHomeView'
 
 import { useBrowseState } from './useBrowseState'
-import { useFavorites } from './useFavorites'
 import { useSearchParam } from './useSearchParam'
-import { useToast } from './useToast'
 
 const DEBOUNCE_MS = 400
 const SUGGESTIONS = ['murder', 'office', 'dragon', 'space']
@@ -44,9 +46,12 @@ export function usePresenter() {
     page,
   })
   const results = data ?? NO_RESULTS
-  // Favorites are kept on the server; every change ends with a toast.
-  const { toast, showToast } = useToast()
-  const favorites = useFavorites(showToast)
+  // The favorites live in a shared store; the page loads them once.
+  useEffect(() => {
+    const controller = new AbortController()
+    loadFavorites(controller.signal)
+    return () => controller.abort()
+  }, [])
 
   const view = getHomeView({
     hasQuery,
@@ -87,7 +92,6 @@ export function usePresenter() {
       pageItemCount: results.items.length,
       total: results.matchCount,
     }),
-    favorites,
-    toast,
+    toast: useToast(),
   }
 }

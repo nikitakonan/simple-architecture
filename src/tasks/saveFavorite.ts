@@ -1,4 +1,4 @@
-import type { Favorites } from '../../../../api/types'
+import type { Favorites } from '../api/types'
 
 /** Anything that can change the favorites: the API client, a fake. */
 export type FavoritesApi = {

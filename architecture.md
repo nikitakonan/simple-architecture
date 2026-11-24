@@ -7,6 +7,8 @@ pattern, and to keep business rules separate from React:
 | Layer         | Where it lives                    | Responsibility                                                |
 | ------------- | --------------------------------- | ------------------------------------------------------------- |
 | **Model**     | `src/api/`, `src/hooks/`          | Talking to the API, data types, reusable non-UI hooks         |
+| **Store**     | `src/stores/`                     | App-wide state as plain data (zustand): the client's database |
+| **Service**   | `src/services/`                   | Shared tasks with their real dependencies already passed in   |
 | **Tasks**     | `logic/tasks/` of a component     | Business logic: plain TypeScript functions, no framework      |
 | **Presenter** | `logic/usePresenter.ts` of a view | State, effects, event handlers; calls tasks and wires deps in |
 | **View**      | `index.tsx` of a component folder | Rendering only: takes data from the presenter or props        |
@@ -21,6 +23,11 @@ src/
 ├── hooks/                    # Reusable non-UI hooks (useDebounce, useShowsPage, ...)
 │   ├── useDebounce.ts
 │   └── useDebounce.test.ts
+├── services/                 # Shared tasks wired to the real api/ and stores/
+│   └── favorites.ts          # loadFavorites(signal), toggleFavorite(show)
+├── stores/                   # App-wide state: zustand stores that hold data only
+│   ├── favoritesStore.ts
+│   └── types.ts              # data shapes and the Store<T> type tasks depend on
 ├── tasks/                    # Business tasks shared by more than one component or hook
 │   ├── findShowsPage.ts
 │   └── findShowsPage.test.ts
@@ -638,6 +645,55 @@ findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
   may call tasks from `src/tasks/`, but never tasks from a component's
   `logic/tasks/`.
 
+### Stores: `src/stores/`
+
+State that several components share (the favorites, the toast) lives in
+[zustand](https://zustand.docs.pmnd.rs/) stores. A store is the client's
+**database**: it holds data and nothing else.
+
+- A store is a module-level singleton made with `createStore` from
+  `zustand/vanilla`. It has no actions, no React, and no app imports except
+  types from `api/types`.
+- Its data shape is in `stores/types.ts`, next to `Store<T>`, the abstraction
+  tasks receive: `getState()` and `setState(patch)`.
+- **All logic is in tasks.** A task that changes shared state receives the
+  store as a dependency, like any other (section 6), so its test passes a
+  plain in-memory fake:
+
+  ```ts
+  // src/tasks/toggleFavorite.ts (excerpt)
+  export type ToggleFavoriteDeps = {
+    api: FavoritesApi
+    store: Store<FavoritesState>
+    notify: (message: string) => void
+  }
+  ```
+
+- **Reading** goes through a shared hook: `useFavorites(select)` reads one
+  value with `useStore`, so the component re-renders only when it changes.
+- **Writing** goes through a service (`src/services/`): plain functions that
+  call shared tasks with the real API and stores already passed in, wired once
+  for the whole app. A service isn't a hook, so presenters just call it, and
+  tests replace it with `vi.mock('…/services/favorites')`:
+
+  ```ts
+  // src/services/favorites.ts (excerpt)
+  const deps = { api: favoritesApi, store: favoritesStore, notify }
+
+  export function toggleFavorite(show: Show): void {
+    void toggleFavoriteTask(show, deps)
+  }
+  ```
+
+- A service holds no rules of its own: anything beyond passing dependencies
+  in is a task. Only presenters, local hooks and shared hooks call services.
+- A selector returns a primitive or a stored value, never a new object or
+  array, or the component re-renders forever. Selection rules are tasks too:
+  `useFavorites((state) => isFavorite(state, show.id))`.
+- Local UI state (an open panel, a selected genre) stays in `useState` in its
+  presenter. Move it into a store only when another component needs it.
+- `src/test/setup.ts` resets every store after each test.
+
 ## 8. Dependency rules
 
 Imports may only point "down" this list:
@@ -652,12 +708,23 @@ pages  →  components  →  ui
         └────────┬───────────┘               │ (import type only)
                  ▼                           ▼
                hooks  →  api  ─────────►  api/types
+                 │                           ▲
+                 └──►  stores  ──────────────┘
+                         ▲
+        tasks ───────────┘ (import type from stores/types only)
+
+  logic/usePresenter  →  services  →  api, stores, src/tasks
 ```
 
 - `ui/` imports nothing from `api/`, `hooks/`, `tasks/`, `components/`, or
   `pages/`.
 - `components/` never imports from `pages/`.
 - `api/` imports nothing from React or from the rest of the app.
+- `stores/` imports only `zustand/vanilla` and types from `api/types`. Only
+  shared hooks and services import a store; tasks import only `stores/types`.
+- `services/` imports `api/`, `stores/` and `src/tasks/`, and nothing from
+  React, `hooks/`, components or `logic/`. Views, tasks, `ui/`, `api/` and
+  `stores/` never import a service.
 - Shared hooks (`src/hooks/`) may import shared tasks (`src/tasks/`).
 - Tasks (`logic/tasks/`, `src/tasks/`) import nothing from React, `hooks/`,
   views, presenters, or local hooks, and only types from `api/`.
@@ -767,17 +834,19 @@ pages  →  components  →  ui
 `npm run check` runs Biome, which checks most of these rules automatically. The
 config is in `biome.json`; a custom GritQL rule is in `biome-plugins/`.
 
-| Rule                                                     | Biome check                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------- |
-| At most 120 lines per file (TS, TSX, CSS)                | `style/noExcessiveLinesPerFile`                               |
-| Named exports only (except `*.config.ts`)                | `style/noDefaultExport`                                       |
-| Import a component by its folder, not its inner files    | `style/noRestrictedImports`, all files                        |
-| A view imports only `./logic/usePresenter` from `logic/` | `style/noRestrictedImports`, override for `src/**/index.tsx`  |
-| A view calls only `usePresenter()`                       | plugin `biome-plugins/view-only-presenter.grit`               |
-| Tasks import no React, hooks, or API implementations     | `style/noRestrictedImports`, override for `src/**/tasks/**`   |
-| `ui/` doesn't depend on app code                         | `style/noRestrictedImports`, override for `src/ui/**`         |
-| `components/` never imports from `pages/`                | `style/noRestrictedImports`, override for `src/components/**` |
-| `api/` has no React or app imports                       | `style/noRestrictedImports`, override for `src/api/**`        |
+| Rule                                                     | Biome check                                                                      |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| At most 120 lines per file (TS, TSX, CSS)                | `style/noExcessiveLinesPerFile`                                                  |
+| Named exports only (except `*.config.ts`)                | `style/noDefaultExport`                                                          |
+| Import a component by its folder, not its inner files    | `style/noRestrictedImports`, all files                                           |
+| A view imports only `./logic/usePresenter` from `logic/` | `style/noRestrictedImports`, override for `src/**/index.tsx`                     |
+| A view calls only `usePresenter()`                       | plugin `biome-plugins/view-only-presenter.grit`                                  |
+| Tasks import no React, hooks, or API implementations     | `style/noRestrictedImports`, override for `src/**/tasks/**`                      |
+| `ui/` doesn't depend on app code                         | `style/noRestrictedImports`, override for `src/ui/**`                            |
+| `components/` never imports from `pages/`                | `style/noRestrictedImports`, override for `src/components/**`                    |
+| `api/` has no React or app imports                       | `style/noRestrictedImports`, override for `src/api/**`                           |
+| Services only wire tasks; nothing below them imports one | `style/noRestrictedImports`, override for `src/services/**` and the others       |
+| Stores hold data only; tasks get them as arguments       | `style/noRestrictedImports`, overrides for `src/stores/**` and `src/**/tasks/**` |
 
 Things to know when changing the config:
 

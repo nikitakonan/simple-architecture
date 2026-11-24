@@ -2,8 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import type { Show } from '../../../api/types'
+import { toggleFavorite } from '../../../services/favorites'
+import { favoritesStore } from '../../../stores/favoritesStore'
 
 import { Favorites } from '.'
+
+vi.mock('../../../services/favorites')
 
 const items = [
   { id: 1, name: 'Fargo', image: null },
@@ -11,10 +15,9 @@ const items = [
 ] as Show[]
 
 function setup() {
-  const onToggle = vi.fn()
-  render(<Favorites items={items} isSaving={() => false} onToggle={onToggle} />)
+  favoritesStore.setState({ items })
+  render(<Favorites />)
   return {
-    onToggle,
     button: screen.getByRole('button', { name: 'Favorites 2' }),
   }
 }
@@ -41,11 +44,11 @@ describe('Favorites', () => {
   })
 
   it('removes a show from the list', async () => {
-    const { button, onToggle } = setup()
+    const { button } = setup()
     await userEvent.click(button)
 
     await userEvent.click(screen.getByRole('button', { name: 'Favorite Lost' }))
 
-    expect(onToggle).toHaveBeenCalledWith(items[1])
+    expect(toggleFavorite).toHaveBeenCalledWith(items[1])
   })
 })

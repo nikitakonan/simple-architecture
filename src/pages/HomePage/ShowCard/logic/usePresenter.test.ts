@@ -1,8 +1,12 @@
 import { renderHook } from '@testing-library/react'
 
 import type { Show } from '../../../../api/types'
+import { toggleFavorite } from '../../../../services/favorites'
+import { favoritesStore } from '../../../../stores/favoritesStore'
 
 import { usePresenter } from './usePresenter'
+
+vi.mock('../../../../services/favorites')
 
 const show: Show = {
   id: 1,
@@ -16,14 +20,13 @@ const show: Show = {
   summary: null,
 }
 
-const props = {
-  show,
-  isFavorite: true,
-  isSavingFavorite: false,
-  onToggleFavorite: vi.fn(),
-}
+const props = { show }
 
 describe('ShowCard usePresenter', () => {
+  beforeEach(() => {
+    favoritesStore.setState({ items: [show] })
+  })
+
   it('returns the show formatted for the card', () => {
     const { result } = renderHook(() => usePresenter(props))
 
@@ -44,7 +47,7 @@ describe('ShowCard usePresenter', () => {
 
     result.current.toggleFavorite()
 
-    expect(props.onToggleFavorite).toHaveBeenCalledWith(show)
+    expect(toggleFavorite).toHaveBeenCalledWith(show)
   })
 
   it('keeps the same card while the show does not change', () => {
