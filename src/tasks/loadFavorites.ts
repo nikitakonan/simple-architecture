@@ -1,5 +1,5 @@
-import type { Favorites } from '../api/types'
-import type { FavoritesState, Store } from '../stores/types'
+import type { Favorites } from '~/api/types'
+import type { FavoritesState, Store } from '~/stores/types'
 
 import { applyFavorites } from './applyFavorites'
 

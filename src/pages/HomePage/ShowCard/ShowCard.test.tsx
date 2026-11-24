@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import type { Show } from '../../../api/types'
-import { toggleFavorite } from '../../../services/favorites'
-import { favoritesStore } from '../../../stores/favoritesStore'
+import type { Show } from '~/api/types'
+import { toggleFavorite } from '~/services/favorites'
+import { favoritesStore } from '~/stores/favoritesStore'
 
 import { ShowCard } from '.'
 
-vi.mock('../../../services/favorites')
+vi.mock('~/services/favorites')
 
 const show: Show = {
   id: 7,

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { fetchShowsPage } from '../api/shows'
-import type { ShowsPage, ShowsPageRequest } from '../api/types'
-import { findShowsPage } from '../tasks/findShowsPage'
+import { fetchShowsPage } from '~/api/shows'
+import type { ShowsPage, ShowsPageRequest } from '~/api/types'
+import { findShowsPage } from '~/tasks/findShowsPage'
 
 export type SearchStatus = 'idle' | 'loading' | 'success' | 'error'
 

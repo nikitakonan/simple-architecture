@@ -1,4 +1,4 @@
-import { StarButton } from '../../../ui/StarButton'
+import { StarButton } from '~/ui/StarButton'
 
 import { type ShowCardProps, usePresenter } from './logic/usePresenter'
 

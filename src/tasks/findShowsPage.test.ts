@@ -1,4 +1,4 @@
-import type { ShowsPage } from '../api/types'
+import type { ShowsPage } from '~/api/types'
 
 import { findShowsPage } from './findShowsPage'
 

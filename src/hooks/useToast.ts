@@ -1,6 +1,6 @@
 import { useStore } from 'zustand'
 
-import { toastStore } from '../stores/toastStore'
+import { toastStore } from '~/stores/toastStore'
 
 /** The toast on screen, or `null`. */
 export function useToast() {

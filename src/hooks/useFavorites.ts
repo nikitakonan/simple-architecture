@@ -1,7 +1,7 @@
 import { useStore } from 'zustand'
 
-import { favoritesStore } from '../stores/favoritesStore'
-import type { FavoritesState } from '../stores/types'
+import { favoritesStore } from '~/stores/favoritesStore'
+import type { FavoritesState } from '~/stores/types'
 
 /**
  * One value from the favorites store; the component re-renders only when that

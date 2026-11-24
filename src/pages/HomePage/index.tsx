@@ -1,5 +1,5 @@
-import { ErrorState } from '../../components/ErrorState'
-import { Toast } from '../../ui/Toast'
+import { ErrorState } from '~/components/ErrorState'
+import { Toast } from '~/ui/Toast'
 
 import { EmptyState } from './EmptyState'
 import { Favorites } from './Favorites'

@@ -1,4 +1,4 @@
-import type { Show } from '../api/types'
+import type { Show } from '~/api/types'
 
 /** "2005 · NBC": the premiere year and the channel, whichever are known. */
 export function describeShowMeta(

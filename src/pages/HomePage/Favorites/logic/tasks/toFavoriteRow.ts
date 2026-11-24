@@ -1,6 +1,6 @@
-import type { Show } from '../../../../../api/types'
-import { describeShowMeta } from '../../../../../tasks/describeShowMeta'
-import { getFavoriteLabel } from '../../../../../tasks/getFavoriteLabel'
+import type { Show } from '~/api/types'
+import { describeShowMeta } from '~/tasks/describeShowMeta'
+import { getFavoriteLabel } from '~/tasks/getFavoriteLabel'
 
 /** One row of the favorites list, ready to render. */
 export type FavoriteRow = {

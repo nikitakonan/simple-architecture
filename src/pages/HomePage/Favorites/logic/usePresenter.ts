@@ -7,9 +7,9 @@ import {
   useState,
 } from 'react'
 
-import { useFavorites } from '../../../../hooks/useFavorites'
-import { toggleFavorite } from '../../../../services/favorites'
-import { isSavingFavorite } from '../../../../tasks/isSavingFavorite'
+import { useFavorites } from '~/hooks/useFavorites'
+import { toggleFavorite } from '~/services/favorites'
+import { isSavingFavorite } from '~/tasks/isSavingFavorite'
 import { toFavoriteRow } from './tasks/toFavoriteRow'
 
 export function usePresenter() {

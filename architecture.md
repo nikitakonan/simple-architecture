@@ -121,15 +121,23 @@ Code outside the folder **always imports the folder itself**, which resolves to
 ```ts
 // ✅ good
 import { HomePage } from './pages/HomePage'
-import { Chip } from '../../ui/Chip'
+import { Chip } from '~/ui/Chip'
 
 // ❌ bad: reaches into another component's internals
 import { usePresenter } from './pages/HomePage/logic/usePresenter'
 import { describeResults } from './pages/HomePage/logic/tasks/describeResults'
-import styles from '../../ui/Chip/Chip.module.css'
+import styles from '~/ui/Chip/Chip.module.css'
 ```
 
 Use named exports only; don't use default exports.
+
+Import paths: anything under `src/` that is outside the current component folder
+is imported through the `~/` alias (`~/ui/Chip`, `~/tasks/isFavorite`,
+`~/api/types`), never with `../`. Relative paths are only for files inside the
+same component folder (`./logic/usePresenter`, `./ShowCard`). The alias maps
+`~/*` to `src/*` in `tsconfig.app.json` (`paths`) and `vite.config.ts`
+(`resolve.alias`), so Vite, Vitest (including `vi.mock('~/...')`), and `tsc`
+all resolve it.
 
 ## 3. Where a child component goes
 
@@ -207,8 +215,8 @@ declare the props type in `logic/usePresenter.ts` and call
 
 ```ts
 // src/pages/HomePage/logic/usePresenter.ts (simplified)
-import { useDebounce } from '../../../hooks/useDebounce'
-import { useShowsPage } from '../../../hooks/useShowsPage'
+import { useDebounce } from '~/hooks/useDebounce'
+import { useShowsPage } from '~/hooks/useShowsPage'
 
 import { describeResults } from './tasks/describeResults'
 import { useBrowseState } from './useBrowseState'
@@ -281,9 +289,9 @@ export function useBrowseState(query: string) {
 
 ```tsx
 // src/pages/HomePage/index.tsx
-import { ErrorState } from '../../components/ErrorState'
-import { Chip } from '../../ui/Chip'
-import { Spinner } from '../../ui/Spinner'
+import { ErrorState } from '~/components/ErrorState'
+import { Chip } from '~/ui/Chip'
+import { Spinner } from '~/ui/Spinner'
 
 import { Pagination } from './components/Pagination'
 import { Header } from './Header'
@@ -518,8 +526,8 @@ The presenter wires the concrete implementations in and keeps the React side
 // src/pages/ProfileMenu/logic/usePresenter.ts
 import { useState } from 'react'
 
-import { authApi } from '../../../api/auth'
-import { tokenStore } from '../../../api/tokenStore'
+import { authApi } from '~/api/auth'
+import { tokenStore } from '~/api/tokenStore'
 
 import { logout } from './tasks/logout'
 
@@ -573,7 +581,7 @@ as a type and never imports the API client:
 
 ```ts
 // src/tasks/findShowsPage.ts
-import type { ShowsPage, ShowsPageRequest } from '../api/types'
+import type { ShowsPage, ShowsPageRequest } from '~/api/types'
 
 /** Anything that can load a page of shows: the API client, a fake in tests. */
 export type FetchShowsPage = (
@@ -605,8 +613,8 @@ side (the `AbortController`, the loading and error state, retries):
 
 ```ts
 // src/hooks/useShowsPage.ts (excerpt)
-import { fetchShowsPage } from '../api/shows'
-import { findShowsPage } from '../tasks/findShowsPage'
+import { fetchShowsPage } from '~/api/shows'
+import { findShowsPage } from '~/tasks/findShowsPage'
 
 findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
 ```

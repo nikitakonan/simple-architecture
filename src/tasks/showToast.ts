@@ -1,4 +1,4 @@
-import type { Store, ToastState } from '../stores/types'
+import type { Store, ToastState } from '~/stores/types'
 
 export const TOAST_MS = 3000
 

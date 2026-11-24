@@ -1,4 +1,4 @@
-import type { Show } from '../api/types'
+import type { Show } from '~/api/types'
 
 /**
  * What a task sees of a store: read its data and write part of it. Stores are

@@ -1,5 +1,5 @@
-import type { Show } from '../../../../../api/types'
-import { describeShowMeta } from '../../../../../tasks/describeShowMeta'
+import type { Show } from '~/api/types'
+import { describeShowMeta } from '~/tasks/describeShowMeta'
 
 /** Everything a show card renders, already formatted. */
 export type ShowView = {

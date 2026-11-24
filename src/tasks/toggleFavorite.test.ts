@@ -1,5 +1,5 @@
-import type { Show } from '../api/types'
-import type { FavoritesState } from '../stores/types'
+import type { Show } from '~/api/types'
+import type { FavoritesState } from '~/stores/types'
 
 import { SAVE_FAVORITE_ERROR, toggleFavorite } from './toggleFavorite'
 

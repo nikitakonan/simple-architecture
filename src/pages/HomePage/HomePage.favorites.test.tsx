@@ -1,13 +1,13 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { toggleFavorite } from '../../services/favorites'
-import { favoritesStore } from '../../stores/favoritesStore'
+import { toggleFavorite } from '~/services/favorites'
+import { favoritesStore } from '~/stores/favoritesStore'
 
 import { renderWith, show } from './HomePage.testUtils'
 
 vi.mock('./logic/usePresenter')
-vi.mock('../../services/favorites')
+vi.mock('~/services/favorites')
 
 describe('HomePage favorites', () => {
   it('shows the favorites count, card stars and the toast', async () => {

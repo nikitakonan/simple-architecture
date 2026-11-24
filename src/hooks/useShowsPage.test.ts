@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 
-import { fetchShowsPage } from '../api/shows'
-import type { ShowsPage, ShowsPageRequest } from '../api/types'
+import { fetchShowsPage } from '~/api/shows'
+import type { ShowsPage, ShowsPageRequest } from '~/api/types'
 
 import { useShowsPage } from './useShowsPage'
 
-vi.mock('../api/shows')
+vi.mock('~/api/shows')
 
 const PAGE = { query: 'murder', items: [] } as unknown as ShowsPage
 const request = (query: string, page = 1): ShowsPageRequest => ({

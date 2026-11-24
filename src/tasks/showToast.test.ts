@@ -1,4 +1,4 @@
-import type { ToastState } from '../stores/types'
+import type { ToastState } from '~/stores/types'
 
 import { showToast, TOAST_MS } from './showToast'
 

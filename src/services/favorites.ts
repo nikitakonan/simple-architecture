@@ -1,10 +1,10 @@
-import * as favoritesApi from '../api/favorites'
-import type { Show } from '../api/types'
-import { favoritesStore } from '../stores/favoritesStore'
-import { toastStore } from '../stores/toastStore'
-import { loadFavorites as loadFavoritesTask } from '../tasks/loadFavorites'
-import { showToast } from '../tasks/showToast'
-import { toggleFavorite as toggleFavoriteTask } from '../tasks/toggleFavorite'
+import * as favoritesApi from '~/api/favorites'
+import type { Show } from '~/api/types'
+import { favoritesStore } from '~/stores/favoritesStore'
+import { toastStore } from '~/stores/toastStore'
+import { loadFavorites as loadFavoritesTask } from '~/tasks/loadFavorites'
+import { showToast } from '~/tasks/showToast'
+import { toggleFavorite as toggleFavoriteTask } from '~/tasks/toggleFavorite'
 
 // The favorites tasks with their real dependencies, wired once for the app.
 

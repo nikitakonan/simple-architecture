@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 
-import type { Show } from '../../../../api/types'
-import { useFavorites } from '../../../../hooks/useFavorites'
-import { toggleFavorite } from '../../../../services/favorites'
-import { getFavoriteLabel } from '../../../../tasks/getFavoriteLabel'
-import { isFavorite } from '../../../../tasks/isFavorite'
-import { isSavingFavorite } from '../../../../tasks/isSavingFavorite'
+import type { Show } from '~/api/types'
+import { useFavorites } from '~/hooks/useFavorites'
+import { toggleFavorite } from '~/services/favorites'
+import { getFavoriteLabel } from '~/tasks/getFavoriteLabel'
+import { isFavorite } from '~/tasks/isFavorite'
+import { isSavingFavorite } from '~/tasks/isSavingFavorite'
 import { formatShow } from './tasks/formatShow'
 
 export type ShowCardProps = {

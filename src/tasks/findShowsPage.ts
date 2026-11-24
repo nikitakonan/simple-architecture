@@ -1,4 +1,4 @@
-import type { ShowsPage, ShowsPageRequest } from '../api/types'
+import type { ShowsPage, ShowsPageRequest } from '~/api/types'
 
 /** Anything that can load a page of shows: the API client, a fake in tests. */
 export type FetchShowsPage = (

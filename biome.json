@@ -37,9 +37,9 @@
             "patterns": [
               {
                 "group": [
-                  "**/components/*/*",
-                  "**/ui/*/*",
-                  "**/pages/*/*",
+                  "**/components/*/**",
+                  "**/ui/*/**",
+                  "**/pages/*/**",
                   "!**/*.module.css"
                 ],
                 "message": "Import a component by its folder, not its inner files."
@@ -91,9 +91,9 @@
                 "patterns": [
                   {
                     "group": [
-                      "**/components/*/*",
-                      "**/ui/*/*",
-                      "**/pages/*/*",
+                      "**/components/*/**",
+                      "**/ui/*/**",
+                      "**/pages/*/**",
                       "!**/*.module.css"
                     ],
                     "message": "Import a component by its folder, not its inner files."
@@ -130,9 +130,9 @@
                 "patterns": [
                   {
                     "group": [
-                      "**/components/*/*",
-                      "**/ui/*/*",
-                      "**/pages/*/*",
+                      "**/components/*/**",
+                      "**/ui/*/**",
+                      "**/pages/*/**",
                       "!**/*.module.css"
                     ],
                     "message": "Import a component by its folder, not its inner files."
@@ -159,9 +159,9 @@
                 "patterns": [
                   {
                     "group": [
-                      "**/components/*/*",
-                      "**/ui/*/*",
-                      "**/pages/*/*",
+                      "**/components/*/**",
+                      "**/ui/*/**",
+                      "**/pages/*/**",
                       "!**/*.module.css"
                     ],
                     "message": "Import a component by its folder, not its inner files."
@@ -202,9 +202,9 @@
                 "patterns": [
                   {
                     "group": [
-                      "**/components/*/*",
-                      "**/ui/*/*",
-                      "**/pages/*/*",
+                      "**/components/*/**",
+                      "**/ui/*/**",
+                      "**/pages/*/**",
                       "!**/*.module.css"
                     ],
                     "message": "Import a component by its folder, not its inner files."
@@ -318,9 +318,9 @@
                 "patterns": [
                   {
                     "group": [
-                      "**/components/*/*",
-                      "**/ui/*/*",
-                      "**/pages/*/*",
+                      "**/components/*/**",
+                      "**/ui/*/**",
+                      "**/pages/*/**",
                       "!**/*.module.css"
                     ],
                     "message": "Import a component by its folder, not its inner files."
@@ -362,9 +362,9 @@
                 "patterns": [
                   {
                     "group": [
-                      "**/components/*/*",
-                      "**/ui/*/*",
-                      "**/pages/*/*",
+                      "**/components/*/**",
+                      "**/ui/*/**",
+                      "**/pages/*/**",
                       "!**/*.module.css"
                     ],
                     "message": "Import a component by its folder, not its inner files."
