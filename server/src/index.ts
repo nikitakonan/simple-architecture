@@ -1,4 +1,4 @@
-import { cachedSearch } from './tasks/cachedSearch'
+import { cacheSearch } from './tasks/cacheSearch'
 
 import { createApp } from './app'
 import { createMemoryCache } from './cache/memoryCache'
@@ -16,7 +16,7 @@ const cache = createMemoryCache<TvmazeSearchResult[]>({
 })
 
 export default createApp({
-  search: cachedSearch(searchTvmaze, cache),
+  search: cacheSearch(searchTvmaze, cache),
   // One list for everyone, in memory: it is lost when the instance restarts.
   favorites: createMemoryFavorites(),
   lookupShow: lookupTvmazeShow,

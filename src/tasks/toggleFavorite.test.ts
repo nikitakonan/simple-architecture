@@ -1,5 +1,6 @@
 import type { Show } from '~/api/types'
-import type { FavoritesState } from '~/stores/types'
+import { favoritesStore } from '~/stores/favoritesStore'
+import { toastStore } from '~/stores/toastStore'
 
 import { SAVE_FAVORITE_ERROR, toggleFavorite } from './toggleFavorite'
 
@@ -7,73 +8,70 @@ const lost = { id: 1, name: 'Lost' } as Show
 const fargo = { id: 2, name: 'Fargo' } as Show
 
 function setup(items: Show[] = [lost]) {
-  let state: FavoritesState = {
-    items,
-    savingIds: [],
-    lastSent: 0,
-    lastApplied: 0,
-  }
-  const store = {
-    getState: () => state,
-    setState: (patch: Partial<FavoritesState>) => {
-      state = { ...state, ...patch }
-    },
-  }
-  const api = { addFavorite: vi.fn(), removeFavorite: vi.fn() }
-  const notify = vi.fn()
-  return { store, api, notify, deps: { store, api, notify } }
+  favoritesStore.setState({ items })
+  return { addFavorite: vi.fn(), removeFavorite: vi.fn() }
 }
 
+const toastText = () => toastStore.getState().toast?.text
+
 describe('toggleFavorite', () => {
-  it('adds a show, stores the server list and notifies', async () => {
-    const { store, api, notify, deps } = setup()
+  it('adds a show, stores the server list and shows a toast', async () => {
+    const api = setup()
     api.addFavorite.mockResolvedValue({ items: [fargo, lost] })
 
-    const saving = toggleFavorite(fargo, deps)
-    expect(store.getState().savingIds).toEqual([2])
+    const saving = toggleFavorite(fargo, api)
+    expect(favoritesStore.getState().savingIds).toEqual([2])
     await saving
 
     expect(api.addFavorite).toHaveBeenCalledWith(2)
-    expect(store.getState()).toMatchObject({ items: [fargo, lost] })
-    expect(store.getState().savingIds).toEqual([])
-    expect(notify).toHaveBeenCalledWith('Added “Fargo” to favorites')
+    expect(favoritesStore.getState()).toMatchObject({ items: [fargo, lost] })
+    expect(favoritesStore.getState().savingIds).toEqual([])
+    expect(toastText()).toBe('Added “Fargo” to favorites')
   })
 
-  it('keeps the list and notifies when saving fails', async () => {
-    const { store, api, notify, deps } = setup()
+  it('removes a show that is already a favorite', async () => {
+    const api = setup()
+    api.removeFavorite.mockResolvedValue({ items: [] })
+
+    await toggleFavorite(lost, api)
+
+    expect(api.removeFavorite).toHaveBeenCalledWith(1)
+    expect(favoritesStore.getState().items).toEqual([])
+    expect(toastText()).toBe('Removed “Lost” from favorites')
+  })
+
+  it('keeps the list and shows a toast when saving fails', async () => {
+    const api = setup()
     api.addFavorite.mockRejectedValue(new Error('down'))
 
-    await toggleFavorite(fargo, deps)
+    await toggleFavorite(fargo, api)
 
-    expect(store.getState().items).toEqual([lost])
-    expect(store.getState().savingIds).toEqual([])
-    expect(notify).toHaveBeenCalledWith(SAVE_FAVORITE_ERROR)
+    expect(favoritesStore.getState().items).toEqual([lost])
+    expect(favoritesStore.getState().savingIds).toEqual([])
+    expect(toastText()).toBe(SAVE_FAVORITE_ERROR)
   })
 
   it('ignores a second click while the show is saving', async () => {
-    const { api, deps } = setup()
+    const api = setup()
     api.addFavorite.mockResolvedValue({ items: [fargo] })
 
-    await Promise.all([
-      toggleFavorite(fargo, deps),
-      toggleFavorite(fargo, deps),
-    ])
+    await Promise.all([toggleFavorite(fargo, api), toggleFavorite(fargo, api)])
 
     expect(api.addFavorite).toHaveBeenCalledOnce()
   })
 
   it('never lets an older response replace a newer list', async () => {
-    const { store, api, deps } = setup([])
+    const api = setup([])
     let answerFargo: (value: { items: Show[] }) => void = () => {}
     api.addFavorite
       .mockReturnValueOnce(new Promise((resolve) => (answerFargo = resolve)))
       .mockResolvedValueOnce({ items: [fargo, lost] })
 
-    const first = toggleFavorite(fargo, deps)
-    await toggleFavorite(lost, deps)
+    const first = toggleFavorite(fargo, api)
+    await toggleFavorite(lost, api)
     answerFargo({ items: [fargo] })
     await first
 
-    expect(store.getState().items).toEqual([fargo, lost])
+    expect(favoritesStore.getState().items).toEqual([fargo, lost])
   })
 })

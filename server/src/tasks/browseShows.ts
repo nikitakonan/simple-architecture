@@ -1,8 +1,8 @@
 import { countGenres } from './countGenres'
 import { filterByGenre } from './filterByGenre'
+import { mapTvmazeShow } from './mapTvmazeShow'
 import { paginate } from './paginate'
 import type { ShowsQuery } from './parseShowsQuery'
-import { toShow } from './toShow'
 
 import type { ShowsPage } from '../contract'
 import type { TvmazeSearchResult } from '../tvmaze/types'
@@ -29,7 +29,7 @@ export async function browseShows(
   { search, pageSize, signal }: BrowseShowsDeps,
 ): Promise<ShowsPage> {
   const results = await search(query, signal)
-  const shows = results.map((result) => toShow(result.show))
+  const shows = results.map((result) => mapTvmazeShow(result.show))
   const matching = filterByGenre(shows, genre)
   const slice = paginate(matching, page, pageSize)
 

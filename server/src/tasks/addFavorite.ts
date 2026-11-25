@@ -1,5 +1,5 @@
 import { type FavoritesStore, listFavorites } from './listFavorites'
-import { toShow } from './toShow'
+import { mapTvmazeShow } from './mapTvmazeShow'
 
 import type { Favorites } from '../contract'
 import type { TvmazeShow } from '../tvmaze/types'
@@ -32,7 +32,7 @@ export async function addFavorite(
   if (!(await store.has(id))) {
     const show = await lookupShow(id, signal)
     if (!show) return { ok: false, error: 'not-found' }
-    await store.add(toShow(show))
+    await store.add(mapTvmazeShow(show))
   }
   return { ok: true, value: await listFavorites(store) }
 }

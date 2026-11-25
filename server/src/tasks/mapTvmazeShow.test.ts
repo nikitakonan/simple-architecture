@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { toShow } from './toShow'
+import { mapTvmazeShow } from './mapTvmazeShow'
 
 import type { TvmazeShow } from '../tvmaze/types'
 
-describe('toShow', () => {
+describe('mapTvmazeShow', () => {
   it('keeps only the fields of the contract', () => {
     const tvmazeShow = {
       id: 1,
@@ -20,7 +20,7 @@ describe('toShow', () => {
       _links: { self: { href: '...' } },
     } as TvmazeShow
 
-    expect(toShow(tvmazeShow)).toEqual({
+    expect(mapTvmazeShow(tvmazeShow)).toEqual({
       id: 1,
       name: 'Murder, She Wrote',
       genres: ['Crime'],

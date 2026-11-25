@@ -194,8 +194,8 @@
               "options": {
                 "paths": {
                   "react": "Tasks are plain TypeScript. Don't import React.",
-                  "zustand": "Tasks get stores as arguments. Don't import zustand.",
-                  "zustand/vanilla": "Tasks get stores as arguments. Don't import zustand."
+                  "zustand": "Tasks use the stores in stores/. Don't import zustand.",
+                  "zustand/vanilla": "Tasks use the stores in stores/. Don't import zustand."
                 },
                 "patterns": [
                   {
@@ -222,10 +222,6 @@
                   {
                     "group": ["**/api/**", "**/api", "!**/api/types"],
                     "message": "Tasks get API implementations as arguments. Import only types from api/types."
-                  },
-                  {
-                    "group": ["**/stores/**", "!**/stores/types"],
-                    "message": "Tasks get stores as arguments. Import only types from stores/types."
                   }
                 ]
               }

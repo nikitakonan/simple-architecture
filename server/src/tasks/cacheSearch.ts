@@ -13,7 +13,7 @@ export type SearchCache = {
  * page or the genre sends the same query again, so this keeps those requests
  * from reaching TVmaze (and its rate limit).
  */
-export function cachedSearch(
+export function cacheSearch(
   search: SearchShows,
   cache: SearchCache,
 ): SearchShows {

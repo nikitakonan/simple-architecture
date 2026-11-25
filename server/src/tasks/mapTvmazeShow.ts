@@ -6,7 +6,7 @@ import type { TvmazeShow } from '../tvmaze/types'
  * (links, schedule, ratings...), so this keeps responses small and keeps the
  * contract independent of TVmaze's format.
  */
-export function toShow(show: TvmazeShow): Show {
+export function mapTvmazeShow(show: TvmazeShow): Show {
   return {
     id: show.id,
     name: show.name,

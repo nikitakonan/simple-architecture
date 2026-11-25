@@ -11,7 +11,7 @@ export type FavoriteRow = {
   starLabel: string
 }
 
-export function toFavoriteRow(show: Show): FavoriteRow {
+export function formatFavoriteRow(show: Show): FavoriteRow {
   const meta = describeShowMeta(show)
   return {
     id: show.id,

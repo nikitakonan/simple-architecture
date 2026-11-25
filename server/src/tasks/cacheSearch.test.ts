@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { cachedSearch, type SearchCache } from './cachedSearch'
+import { cacheSearch, type SearchCache } from './cacheSearch'
 
 import type { TvmazeSearchResult } from '../tvmaze/types'
 
@@ -14,10 +14,10 @@ function mapCache(): SearchCache {
 
 const RESULTS = [{ score: 1, show: { id: 1 } }] as TvmazeSearchResult[]
 
-describe('cachedSearch', () => {
+describe('cacheSearch', () => {
   it('searches once per query, ignoring case and spaces', async () => {
     const search = vi.fn().mockResolvedValue(RESULTS)
-    const cached = cachedSearch(search, mapCache())
+    const cached = cacheSearch(search, mapCache())
 
     await expect(cached('Murder')).resolves.toBe(RESULTS)
     await expect(cached(' murder ')).resolves.toBe(RESULTS)
@@ -30,7 +30,7 @@ describe('cachedSearch', () => {
       .fn()
       .mockRejectedValueOnce(new Error('Network down'))
       .mockResolvedValueOnce(RESULTS)
-    const cached = cachedSearch(search, mapCache())
+    const cached = cacheSearch(search, mapCache())
 
     await expect(cached('murder')).rejects.toThrow('Network down')
     await expect(cached('murder')).resolves.toBe(RESULTS)

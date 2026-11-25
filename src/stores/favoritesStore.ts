@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla'
 
 import type { FavoritesState } from './types'
 
-/** The app's favorites. Data only: tasks read and write it. */
+/** The app’s favorites. Data only: tasks import it to read and write it. */
 export const favoritesStore = createStore<FavoritesState>()(() => ({
   items: [],
   savingIds: [],

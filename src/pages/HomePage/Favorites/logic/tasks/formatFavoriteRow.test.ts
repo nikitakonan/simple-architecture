@@ -1,8 +1,8 @@
 import type { Show } from '~/api/types'
 
-import { toFavoriteRow } from './toFavoriteRow'
+import { formatFavoriteRow } from './formatFavoriteRow'
 
-describe('toFavoriteRow', () => {
+describe('formatFavoriteRow', () => {
   it('formats a show for the favorites list', () => {
     const show = {
       id: 2,
@@ -13,7 +13,7 @@ describe('toFavoriteRow', () => {
       image: { medium: 'https://example.com/o.jpg', original: '' },
     } as Show
 
-    expect(toFavoriteRow(show)).toEqual({
+    expect(formatFavoriteRow(show)).toEqual({
       id: 2,
       name: 'The Office',
       meta: '2001 · BBC Two',

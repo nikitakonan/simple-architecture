@@ -4,13 +4,13 @@ These rules describe how code in this app is organised. The goal is to keep the
 UI separate from the logic, in the spirit of the **MVP (Model–View–Presenter)**
 pattern, and to keep business rules separate from React:
 
-| Layer         | Where it lives                    | Responsibility                                                |
-| ------------- | --------------------------------- | ------------------------------------------------------------- |
-| **Model**     | `src/api/`, `src/hooks/`          | Talking to the API, data types, reusable non-UI hooks         |
-| **Store**     | `src/stores/`                     | App-wide state as plain data (zustand): the client's database |
-| **Tasks**     | `logic/tasks/` of a component     | Business logic: plain TypeScript functions, no framework      |
-| **Presenter** | `logic/usePresenter.ts` of a view | State, effects, event handlers; calls tasks and wires deps in |
-| **View**      | `index.tsx` of a component folder | Rendering only: takes data from the presenter or props        |
+| Layer         | Where it lives                    | Responsibility                                                 |
+| ------------- | --------------------------------- | -------------------------------------------------------------- |
+| **Model**     | `src/api/`, `src/hooks/`          | Talking to the API, data types, reusable non-UI hooks          |
+| **Store**     | `src/stores/`                     | App-wide state as plain data (zustand): the client's database  |
+| **Tasks**     | `logic/tasks/`, `src/tasks/`      | Business logic: verb-named functions that use stores, no React |
+| **Presenter** | `logic/usePresenter.ts` of a view | State, effects, event handlers; calls tasks and wires deps in  |
+| **View**      | `index.tsx` of a component folder | Rendering only: takes data from the presenter or props         |
 
 ## 1. Folder layout
 
@@ -437,19 +437,27 @@ are tasks. If a presenter or hook does more than wire state to the view, the
 
 Tasks are **framework-agnostic**: plain TypeScript functions.
 
+- **A task is a function, and its name is a verb**: it says what it does
+  (`logout`, `toggleFavorite`, `countGenres`, `formatShow`, `mapTvmazeShow`),
+  not what it returns (`toShow`, `cachedSearch`). Selection rules that answer
+  a yes/no question about state keep the `is` form (`isFavorite`).
 - One task per file, named after the function: `logic/tasks/logout.ts` exports
   `logout`. The file may also export the types of the task's input, output,
   and dependencies.
 - No React: a task never imports `react`, never calls hooks, and never touches
   component state. It takes values as arguments and returns a result (or a
   `Promise` of one).
-- No direct I/O: a task never calls `fetch`, `localStorage`, `window`, or an
-  `src/api/` function itself. It declares what it needs as an **abstraction**
-  (a TypeScript type describing the dependency) and receives the concrete
-  implementation as an argument.
+- **Tasks use the stores directly**: a task that reads or changes shared state
+  imports the store from `src/stores/` (`favoritesStore`, `toastStore`) and
+  calls `getState()` / `setState()` on it (section 7). Stores are the app's
+  database, and tasks are the only code that writes to them.
+- No other direct I/O: a task never calls `fetch`, `localStorage`, `window`,
+  or an `src/api/` function itself. It declares what it needs as an
+  **abstraction** (a TypeScript type describing the dependency) and receives
+  the concrete implementation as an argument.
 - It may import domain types with `import type` (for example `Show` from
-  `src/api/types.ts`) and other tasks from the same `tasks/` folder or from
-  `src/tasks/`.
+  `src/api/types.ts`), the stores, and other tasks from the same `tasks/`
+  folder or from `src/tasks/` (`toggleFavorite` calls `showToast` itself).
 - It never imports from the view, the presenter, local hooks, or CSS.
 
 ### Depending on abstractions
@@ -532,14 +540,18 @@ export function describeResults({ total, filtered, genre }: ResultsInput) {
 }
 ```
 
-### Shared tasks
+### Shared tasks: `src/tasks/`
+
+Reusable tasks are global: they live in `src/tasks/` and are imported as
+`~/tasks/<name>`.
 
 - A task in `logic/tasks/` is private to its component: only that
   component's presenter, local hooks, and other tasks in the same folder
   import it.
-- When a second component, or a shared hook in `src/hooks/`, needs a task,
-  move it to `src/tasks/`. Shared tasks follow the same rules: plain
-  TypeScript, dependencies passed in as arguments, a test next to each one.
+- When a second component, a shared hook in `src/hooks/`, or a shared task
+  needs a task, move it to `src/tasks/`. Shared tasks follow the same rules:
+  plain TypeScript, a verb for a name, stores imported, other dependencies
+  passed in as arguments, a test next to each one.
 - Shared tasks are imported by presenters, local hooks, shared hooks, and
   other tasks. Views, `ui/`, and `api/` never import them.
 
@@ -557,9 +569,9 @@ import { normalizeShowsRequest } from './tasks/normalizeShowsRequest'
 fetchShowsPage(normalizeShowsRequest({ query, genre, page }), signal)
 ```
 
-Pass dependencies in when a task coordinates them (an API call plus a store
-update and a toast, as in `toggleFavorite`); don't wrap a single API call in a
-task just to pass it through.
+Pass the API in when a task coordinates it with other work (an API call plus
+a store update and a toast, as in `toggleFavorite`); don't wrap a single API
+call in a task just to pass it through.
 
 ## 7. Model layer: `api/` and `hooks/`
 
@@ -606,18 +618,21 @@ State that several components share (the favorites, the toast) lives in
 - A store is a module-level singleton made with `createStore` from
   `zustand/vanilla`. It has no actions, no React, and no app imports except
   types from `api/types`.
-- Its data shape is in `stores/types.ts`, next to `Store<T>`, the abstraction
-  tasks receive: `getState()` and `setState(patch)`.
-- **All logic is in tasks.** A task that changes shared state receives the
-  store as a dependency, like any other (section 6), so its test passes a
-  plain in-memory fake:
+- Its data shape is in `stores/types.ts`.
+- **All logic is in tasks, and tasks use the store directly.** A task imports
+  the store module and reads and writes it with `getState()` and
+  `setState(patch)`; only the API is passed in. Its test uses the real store,
+  which `src/test/setup.ts` empties after each test:
 
   ```ts
   // src/tasks/toggleFavorite.ts (excerpt)
-  export type ToggleFavoriteDeps = {
-    api: FavoritesApi
-    store: Store<FavoritesState>
-    notify: (message: string) => void
+  import { favoritesStore } from '~/stores/favoritesStore'
+
+  export async function toggleFavorite(show: Show, api: FavoritesApi) {
+    const state = favoritesStore.getState()
+    if (isSavingFavorite(state, show.id)) return
+    // ...
+    showToast(describeFavoriteChange({ name: show.name, favorite }))
   }
   ```
 
@@ -627,22 +642,17 @@ State that several components share (the favorites, the toast) lives in
   presenter depends on that hook, not on the store, and each hook reads only
   what its component shows, with `useStore`, so it re-renders only when that
   changes. A hook moves to `src/hooks/` only when a second component needs it.
-- **Writing** goes through a hook too: it calls a shared task with the real
-  API and stores passed in and hands the presenter a plain function.
-  `HomePage/logic/useLoadFavorites()` loads the list when the page mounts;
-  `src/hooks/useToggleFavorite()` is shared because ShowCard and Favorites
-  both use it; `src/hooks/useNotify()` wires the toast for both. Presenter
-  tests replace the task with `vi.mock('~/tasks/toggleFavorite')`:
+- **Writing** is a call to a task. A handler calls it with the real API
+  passed in; a hook isn't needed just to return a function that calls a task.
+  ShowCard's and Favorites' presenters both call `toggleFavorite` this way.
+  A hook is used only when writing needs React, like
+  `HomePage/logic/useLoadFavorites()`, which loads the list in an effect when
+  the page mounts. Presenter tests replace the task with
+  `vi.mock('~/tasks/toggleFavorite')`:
 
   ```ts
-  // src/hooks/useToggleFavorite.ts (excerpt)
-  const notify = useNotify()
-  return useCallback(
-    (show: Show) => {
-      void toggleFavorite(show, { api: favoritesApi, store: favoritesStore, notify })
-    },
-    [notify],
-  )
+  // src/pages/HomePage/ShowCard/logic/usePresenter.ts (excerpt)
+  toggleFavorite: () => void toggleFavorite(show, favoritesApi),
   ```
 
 - Such a hook holds no rules of its own: anything beyond passing dependencies
@@ -671,7 +681,7 @@ pages  →  components  →  ui
                  │                           ▲
                  └──►  stores  ──────────────┘
                          ▲
-        tasks ───────────┘ (import type from stores/types only)
+        tasks ───────────┘ (tasks use the stores directly)
 
   logic/use*          →  api, stores   (local hooks, like shared ones)
 ```
@@ -680,12 +690,12 @@ pages  →  components  →  ui
   `pages/`.
 - `components/` never imports from `pages/`.
 - `api/` imports nothing from React or from the rest of the app.
-- `stores/` imports only `zustand/vanilla` and types from `api/types`. Only
-  hooks (shared or local) import a store; tasks import only
-  `stores/types`.
+- `stores/` imports only `zustand/vanilla` and types from `api/types`. Tasks
+  import a store to read and write it; hooks (shared or local) import a store
+  only to read it with `useStore`.
 - Shared hooks (`src/hooks/`) may import shared tasks (`src/tasks/`).
-- Tasks (`logic/tasks/`, `src/tasks/`) import nothing from React, `hooks/`,
-  views, presenters, or local hooks, and only types from `api/`.
+- Tasks (`logic/tasks/`, `src/tasks/`) import nothing from React, zustand,
+  `hooks/`, views, presenters, or local hooks, and only types from `api/`.
 - A child never imports from its parent. Data goes down through props, and
   events come up through callbacks.
 - A view imports `./logic/usePresenter`, child components, and its CSS module.
@@ -706,7 +716,9 @@ pages  →  components  →  ui
 - Every task has a test next to it (`logic/tasks/logout.test.ts`). Tasks are
   plain functions, so their tests are plain too: no `renderHook`, no `render`,
   and no global `fetch` mocks. Pass fakes that match the task's dependency
-  types:
+  types. A task that uses a store is tested against the real store (set it up
+  with `setState`, check it with `getState`); `src/test/setup.ts` resets every
+  store after each test:
 
   ```ts
   // src/pages/ProfileMenu/logic/tasks/logout.test.ts
@@ -777,8 +789,10 @@ pages  →  components  →  ui
 - [ ] Keep one component per file: `index.tsx` defines only this component.
 - [ ] If it has logic, put it in `logic/usePresenter.ts` and test it in
   `logic/usePresenter.test.ts`.
-- [ ] Put business rules in tasks under `logic/tasks/`: plain TypeScript, no
-  React, dependencies passed in as abstractions, each with its own test.
+- [ ] Put business rules in tasks under `logic/tasks/` (or `src/tasks/` when
+  they're reused): functions named with a verb, plain TypeScript, no React,
+  stores used directly, other dependencies passed in as abstractions, each
+  with its own test.
 - [ ] Make sure the view calls only `usePresenter()` / `usePresenter(props)`
   (or no hook at all) and renders.
 - [ ] Keep every file at 120 lines or fewer; split views into children,
@@ -803,7 +817,7 @@ config is in `biome.json`; a custom GritQL rule is in `biome-plugins/`.
 | `ui/` doesn't depend on app code                         | `style/noRestrictedImports`, override for `src/ui/**`                            |
 | `components/` never imports from `pages/`                | `style/noRestrictedImports`, override for `src/components/**`                    |
 | `api/` has no React or app imports                       | `style/noRestrictedImports`, override for `src/api/**`                           |
-| Stores hold data only; tasks get them as arguments       | `style/noRestrictedImports`, overrides for `src/stores/**` and `src/**/tasks/**` |
+| Stores hold data only; tasks import them, not zustand    | `style/noRestrictedImports`, overrides for `src/stores/**` and `src/**/tasks/**` |
 
 Things to know when changing the config:
 
@@ -828,4 +842,6 @@ checklist above:
 - a child never imports from its parent;
 - a presenter returns no JSX and imports no CSS;
 - business rules live in tasks, not inline in presenters or hooks;
-- a task receives its dependencies as arguments instead of importing them.
+- a task's name is a verb;
+- a task uses the stores directly and receives its other dependencies (the
+  API) as arguments instead of importing them.

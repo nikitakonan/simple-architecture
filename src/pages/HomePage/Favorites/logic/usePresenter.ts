@@ -7,15 +7,15 @@ import {
   useState,
 } from 'react'
 
-import { useToggleFavorite } from '~/hooks/useToggleFavorite'
+import * as favoritesApi from '~/api/favorites'
 import { isSavingFavorite } from '~/tasks/isSavingFavorite'
-import { toFavoriteRow } from './tasks/toFavoriteRow'
+import { toggleFavorite } from '~/tasks/toggleFavorite'
+import { formatFavoriteRow } from './tasks/formatFavoriteRow'
 
 import { useFavorites } from './useFavorites'
 
 export function usePresenter() {
   const { items, savingIds } = useFavorites()
-  const toggleFavorite = useToggleFavorite()
   const [isOpen, setIsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const panelId = useId()
@@ -36,12 +36,12 @@ export function usePresenter() {
     panelId,
     isOpen,
     count: items.length,
-    rows: useMemo(() => items.map(toFavoriteRow), [items]),
+    rows: useMemo(() => items.map(formatFavoriteRow), [items]),
     isSaving: (id: number) => isSavingFavorite({ savingIds }, id),
     // The panel reports an id; the task toggles the whole show.
     toggleById: (id: number) => {
       const show = items.find((item) => item.id === id)
-      if (show) toggleFavorite(show)
+      if (show) void toggleFavorite(show, favoritesApi)
     },
     toggleOpen: () => setIsOpen((open) => !open),
     close: () => setIsOpen(false),
