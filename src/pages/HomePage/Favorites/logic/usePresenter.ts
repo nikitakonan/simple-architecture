@@ -7,14 +7,14 @@ import {
   useState,
 } from 'react'
 
-import { useFavorites } from '~/hooks/useFavorites'
 import { toggleFavorite } from '~/services/favorites'
 import { isSavingFavorite } from '~/tasks/isSavingFavorite'
 import { toFavoriteRow } from './tasks/toFavoriteRow'
 
+import { useFavorites } from './useFavorites'
+
 export function usePresenter() {
-  const items = useFavorites((state) => state.items)
-  const savingIds = useFavorites((state) => state.savingIds)
+  const { items, savingIds } = useFavorites()
   const [isOpen, setIsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const panelId = useId()

@@ -1,11 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 
 import type { ShowsPage } from '~/api/types'
-import { useShowsPage } from '~/hooks/useShowsPage'
 
 import { usePresenter } from './usePresenter'
+import { useShowsPage } from './useShowsPage'
 
-vi.mock('~/hooks/useShowsPage')
+vi.mock('./useShowsPage')
 vi.mock('~/api/favorites')
 vi.mock('~/hooks/useDebounce', () => ({
   useDebounce: <T>(value: T) => value,

@@ -2,8 +2,6 @@ import { useEffect } from 'react'
 
 import type { ShowsPage } from '~/api/types'
 import { useDebounce } from '~/hooks/useDebounce'
-import { useShowsPage } from '~/hooks/useShowsPage'
-import { useToast } from '~/hooks/useToast'
 import { loadFavorites } from '~/services/favorites'
 import { describeRange } from './tasks/describeRange'
 import { describeResults } from './tasks/describeResults'
@@ -11,6 +9,8 @@ import { getHomeView } from './tasks/getHomeView'
 
 import { useBrowseState } from './useBrowseState'
 import { useSearchParam } from './useSearchParam'
+import { useShowsPage } from './useShowsPage'
+import { useToast } from './useToast'
 
 const DEBOUNCE_MS = 400
 const SUGGESTIONS = ['murder', 'office', 'dragon', 'space']

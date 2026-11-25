@@ -15,66 +15,34 @@ pattern, and to keep business rules separate from React:
 
 ## 1. Folder layout
 
+The tree shows what goes where, not every file. One component, HomePage, is
+shown in full as the pattern for the others.
+
 ```
 src/
-├── api/                      # Model: HTTP client and API types
-│   ├── shows.ts              # client for the API server in server/
-│   └── types.ts              # re-exports the server's contract types
-├── hooks/                    # Reusable non-UI hooks (useDebounce, useShowsPage, ...)
-│   ├── useDebounce.ts
-│   └── useDebounce.test.ts
-├── services/                 # Shared tasks wired to the real api/ and stores/
-│   └── favorites.ts          # loadFavorites(signal), toggleFavorite(show)
-├── stores/                   # App-wide state: zustand stores that hold data only
-│   ├── favoritesStore.ts
-│   └── types.ts              # data shapes and the Store<T> type tasks depend on
-├── tasks/                    # Business tasks shared by more than one component or hook
-│   ├── findShowsPage.ts
-│   └── findShowsPage.test.ts
-├── ui/                       # App-wide UI primitives that know nothing about the domain
-│   ├── Button/
-│   ├── Chip/
-│   └── Spinner/
-├── components/               # App-wide components that know about the domain
-│   └── ErrorState/
+├── api/              # Model: HTTP client and API types (no React)
+├── hooks/            # React hooks used by more than one component
+├── services/         # Shared tasks wired to the real api/ and stores/
+├── stores/           # App-wide state: zustand stores that hold data only
+├── tasks/            # Business tasks used by more than one component or hook
+├── ui/               # App-wide UI primitives that know nothing about the domain
+├── components/       # App-wide components that know about the domain
 ├── pages/
 │   └── HomePage/
-│       ├── index.tsx             # the HomePage component itself (the view)
+│       ├── index.tsx                 # the component itself (the view)
 │       ├── HomePage.module.css
 │       ├── HomePage.test.tsx
-│       ├── logic/                # everything that isn't rendering
+│       ├── logic/                    # everything that isn't rendering
 │       │   ├── usePresenter.ts
 │       │   ├── usePresenter.test.ts
-│       │   ├── useSearchParam.ts     # local hooks used only by this presenter
-│       │   ├── useBrowseState.ts
-│       │   ├── useBrowseState.test.ts
+│       │   ├── useShowsPage.ts       # a local hook, used only by this presenter
 │       │   └── tasks/                # business logic: plain TS, no React
-│       │       ├── describeResults.ts
-│       │       ├── describeResults.test.ts
 │       │       ├── getHomeView.ts
 │       │       └── getHomeView.test.ts
-│       ├── Header/               # used once by HomePage: its own folder, next to the parent
-│       │   ├── index.tsx
-│       │   ├── Header.module.css
-│       │   └── Header.test.tsx
-│       ├── ShowCard/             # used once by HomePage (inside a .map)
-│       │   ├── index.tsx
-│       │   ├── ShowCard.module.css
-│       │   ├── ShowCard.test.tsx
-│       │   └── logic/
-│       │       ├── usePresenter.ts
-│       │       ├── usePresenter.test.ts
-│       │       └── tasks/
-│       │           ├── formatShow.ts
-│       │           └── formatShow.test.ts
-│       └── components/           # reused inside HomePage's subtree
-│           └── Pagination/
-│               ├── index.tsx
-│               ├── Pagination.module.css
-│               └── Pagination.test.tsx
-├── test/
-│   └── setup.ts
-├── index.css                 # Global resets and CSS variables only
+│       ├── ShowCard/                 # a child used only by HomePage: same layout
+│       └── components/               # children reused inside HomePage's subtree
+├── test/setup.ts     # jest-dom matchers, cleanup, store resets
+├── index.css         # global resets and CSS variables only
 └── main.tsx
 ```
 
@@ -216,11 +184,11 @@ declare the props type in `logic/usePresenter.ts` and call
 ```ts
 // src/pages/HomePage/logic/usePresenter.ts (simplified)
 import { useDebounce } from '~/hooks/useDebounce'
-import { useShowsPage } from '~/hooks/useShowsPage'
 
 import { describeResults } from './tasks/describeResults'
 import { useBrowseState } from './useBrowseState'
 import { useSearchParam } from './useSearchParam'
+import { useShowsPage } from './useShowsPage'
 
 export function usePresenter() {
   const [query, setQuery] = useSearchParam('q') // local: syncs with ?q= in the URL
@@ -229,7 +197,7 @@ export function usePresenter() {
   // local: the selected genre and page; both reset when the query changes
   const { genre, page, selectGenre, setPage } = useBrowseState(debouncedQuery)
 
-  // shared: loads one page from the API server, which filters and paginates
+  // local: loads one page from the API server, which filters and paginates
   const { data, status, retry } = useShowsPage({
     query: debouncedQuery,
     genre,
@@ -442,10 +410,11 @@ limit, split it:
 A presenter can import:
 
 - **Local hooks from its own `logic/` folder**: `HomePage/logic/useSearchParam.ts`,
-  `HomePage/logic/useBrowseState.ts`. Use these for React logic that belongs
-  to this component only.
-- **Shared hooks from `src/hooks/`**: `useDebounce`, `useShowsPage`. Use these
-  for React logic that more than one component needs.
+  `HomePage/logic/useShowsPage.ts`, `ShowCard/logic/useFavoriteStatus.ts`.
+  Use these for React logic that belongs to this component only, including
+  reading a store.
+- **Shared hooks from `src/hooks/`**: `useDebounce`. Use these for React logic
+  that more than one component needs.
 
 Rules for local hooks:
 
@@ -608,11 +577,11 @@ export function findShowsPage(
 }
 ```
 
-The shared hook `useShowsPage` passes in the real client and keeps the React
+The local hook `useShowsPage` passes in the real client and keeps the React
 side (the `AbortController`, the loading and error state, retries):
 
 ```ts
-// src/hooks/useShowsPage.ts (excerpt)
+// src/pages/HomePage/logic/useShowsPage.ts (excerpt)
 import { fetchShowsPage } from '~/api/shows'
 import { findShowsPage } from '~/tasks/findShowsPage'
 
@@ -646,10 +615,12 @@ findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
   }
   ```
 
-- `src/hooks/` holds reusable hooks that aren't tied to one view:
-  `useDebounce`, and `useShowsPage`, which runs the `findShowsPage` task with
-  the API client, an `AbortController`, and the loading, error, and success
-  states. Presenters use these hooks; views never import them. A shared hook
+- `src/hooks/` holds reusable hooks that aren't tied to one view, like
+  `useDebounce`. A hook used by one component lives in that component's
+  `logic/` folder instead (`HomePage/logic/useShowsPage.ts` runs the
+  `findShowsPage` task with the API client, an `AbortController`, and the
+  loading, error, and success states). Presenters use these hooks; views
+  never import them. A shared hook
   may call tasks from `src/tasks/`, but never tasks from a component's
   `logic/tasks/`.
 
@@ -677,8 +648,12 @@ State that several components share (the favorites, the toast) lives in
   }
   ```
 
-- **Reading** goes through a shared hook: `useFavorites(select)` reads one
-  value with `useStore`, so the component re-renders only when it changes.
+- **Reading** goes through a local hook of the component that needs the data,
+  shaped for that component: `Favorites/logic/useFavorites()` returns the list,
+  `ShowCard/logic/useFavoriteStatus(id)` returns one card's two booleans. The
+  presenter depends on that hook, not on the store, and each hook reads only
+  what its component shows, with `useStore`, so it re-renders only when that
+  changes. A hook moves to `src/hooks/` only when a second component needs it.
 - **Writing** goes through a service (`src/services/`): plain functions that
   call shared tasks with the real API and stores already passed in, wired once
   for the whole app. A service isn't a hook, so presenters just call it, and
@@ -697,7 +672,7 @@ State that several components share (the favorites, the toast) lives in
   in is a task. Only presenters, local hooks and shared hooks call services.
 - A selector returns a primitive or a stored value, never a new object or
   array, or the component re-renders forever. Selection rules are tasks too:
-  `useFavorites((state) => isFavorite(state, show.id))`.
+  `useStore(favoritesStore, (state) => isFavorite(state, showId))`.
 - Local UI state (an open panel, a selected genre) stays in `useState` in its
   presenter. Move it into a store only when another component needs it.
 - `src/test/setup.ts` resets every store after each test.
@@ -722,6 +697,7 @@ pages  →  components  →  ui
         tasks ───────────┘ (import type from stores/types only)
 
   logic/usePresenter  →  services  →  api, stores, src/tasks
+  logic/use*          →  api, stores   (local hooks, like shared ones)
 ```
 
 - `ui/` imports nothing from `api/`, `hooks/`, `tasks/`, `components/`, or
@@ -729,7 +705,8 @@ pages  →  components  →  ui
 - `components/` never imports from `pages/`.
 - `api/` imports nothing from React or from the rest of the app.
 - `stores/` imports only `zustand/vanilla` and types from `api/types`. Only
-  shared hooks and services import a store; tasks import only `stores/types`.
+  hooks (shared or local) and services import a store; tasks import only
+  `stores/types`.
 - `services/` imports `api/`, `stores/` and `src/tasks/`, and nothing from
   React, `hooks/`, components or `logic/`. Views, tasks, `ui/`, `api/` and
   `stores/` never import a service.
