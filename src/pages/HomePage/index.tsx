@@ -1,7 +1,7 @@
-import { ErrorState } from '~/components/ErrorState'
 import { Toast } from '~/ui/Toast'
 
 import { EmptyState } from './EmptyState'
+import { ErrorState } from './ErrorState'
 import { Favorites } from './Favorites'
 import { GenreFilter } from './GenreFilter'
 import { Header } from './Header'

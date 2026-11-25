@@ -26,7 +26,7 @@ src/
 ├── stores/           # App-wide state: zustand stores that hold data only
 ├── tasks/            # Business tasks used by more than one component or hook
 ├── ui/               # App-wide UI primitives that know nothing about the domain
-├── components/       # App-wide components that know about the domain
+├── components/       # Domain components shared by pages (none yet)
 ├── pages/
 │   └── HomePage/
 │       ├── index.tsx                 # the component itself (the view)
@@ -117,8 +117,8 @@ Answer these questions in order:
      `Chip`, `Spinner`, `Input`. They take only plain props such as `label`,
      `onClick`, and `selected`, and never import from `api/` or use domain types
      like `Show`.
-   - `src/components/` holds shared components that know about the domain:
-     `ErrorState`, or a `ShowCard` if several pages show it.
+   - `src/components/` holds shared components that know about the domain,
+     like a `ShowCard` if several pages showed it. There are none yet.
 2. **Is it reused inside one parent's subtree (rendered from two or more places
    in it)?** Put it in that parent's `components/` folder, as a full component
    folder: `HomePage/components/Pagination/`.
@@ -257,11 +257,11 @@ export function useBrowseState(query: string) {
 
 ```tsx
 // src/pages/HomePage/index.tsx
-import { ErrorState } from '~/components/ErrorState'
 import { Chip } from '~/ui/Chip'
 import { Spinner } from '~/ui/Spinner'
 
 import { Pagination } from './components/Pagination'
+import { ErrorState } from './ErrorState'
 import { Header } from './Header'
 import { usePresenter } from './logic/usePresenter'
 import { ShowCard } from './ShowCard'
@@ -324,12 +324,12 @@ export function HomePage() {
 
 Notes on this example:
 
-- `Header` and `ShowCard` are each used in one place → their own folders
-  directly in `HomePage/` (`HomePage/Header/`, `HomePage/ShowCard/`).
+- `Header`, `ShowCard` and `ErrorState` are each used in one place → their
+  own folders directly in `HomePage/` (`HomePage/Header/`,
+  `HomePage/ShowCard/`, `HomePage/ErrorState/`).
 - `Pagination` is rendered twice (above and below the list) → it goes in
   `HomePage/components/Pagination/`.
-- `Chip` and `Spinner` are generic → `src/ui/`. `ErrorState` is shared by
-  pages → `src/components/`.
+- `Chip` and `Spinner` are generic → `src/ui/`.
 - The view imports only `./logic/usePresenter` from `logic/`.
 
 ### Example: a single-use child without logic
