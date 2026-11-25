@@ -105,7 +105,6 @@
                       "**/api",
                       "**/tasks/**",
                       "**/stores/**",
-                      "**/services/**",
                       "./use*",
                       "./logic/**",
                       "!./logic/usePresenter"
@@ -172,7 +171,6 @@
                       "**/api",
                       "**/hooks/**",
                       "**/stores/**",
-                      "**/services/**",
                       "**/tasks/**",
                       "**/components/**",
                       "**/pages/**"
@@ -212,7 +210,6 @@
                   {
                     "group": [
                       "**/hooks/**",
-                      "**/services/**",
                       "**/components/**",
                       "**/ui/**",
                       "**/pages/**",
@@ -289,7 +286,6 @@
                       "**/hooks/**",
                       "**/tasks/**",
                       "**/stores/**",
-                      "**/services/**",
                       "**/components/**",
                       "**/ui/**",
                       "**/pages/**"
@@ -328,7 +324,6 @@
                   {
                     "group": [
                       "**/hooks/**",
-                      "**/services/**",
                       "**/tasks/**",
                       "**/components/**",
                       "**/ui/**",
@@ -339,45 +334,6 @@
                   {
                     "group": ["**/api/**", "**/api", "!**/api/types"],
                     "message": "Stores import only types from api/types."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/services/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "paths": {
-                  "react": "Services only wire tasks to their dependencies. Don't import React.",
-                  "zustand": "Services pass stores to tasks. React binds stores in hooks/."
-                },
-                "patterns": [
-                  {
-                    "group": [
-                      "**/components/*/**",
-                      "**/ui/*/**",
-                      "**/pages/*/**",
-                      "!**/*.module.css"
-                    ],
-                    "message": "Import a component by its folder, not its inner files."
-                  },
-                  {
-                    "group": [
-                      "**/hooks/**",
-                      "**/components/**",
-                      "**/ui/**",
-                      "**/pages/**",
-                      "**/logic/**"
-                    ],
-                    "message": "Services wire shared tasks to api/ and stores/ only."
                   }
                 ]
               }
@@ -412,13 +368,7 @@
               ":BLANK_LINE:",
               ["**/components/**", "**/ui/**"],
               ":BLANK_LINE:",
-              [
-                "**/hooks/**",
-                "**/tasks/**",
-                "**/api/**",
-                "**/stores/**",
-                "**/services/**"
-              ],
+              ["**/hooks/**", "**/tasks/**", "**/api/**", "**/stores/**"],
               ":BLANK_LINE:",
               ["./**", "!**/*.css"],
               ":BLANK_LINE:",

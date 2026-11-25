@@ -8,7 +8,6 @@ pattern, and to keep business rules separate from React:
 | ------------- | --------------------------------- | ------------------------------------------------------------- |
 | **Model**     | `src/api/`, `src/hooks/`          | Talking to the API, data types, reusable non-UI hooks         |
 | **Store**     | `src/stores/`                     | App-wide state as plain data (zustand): the client's database |
-| **Service**   | `src/services/`                   | Shared tasks with their real dependencies already passed in   |
 | **Tasks**     | `logic/tasks/` of a component     | Business logic: plain TypeScript functions, no framework      |
 | **Presenter** | `logic/usePresenter.ts` of a view | State, effects, event handlers; calls tasks and wires deps in |
 | **View**      | `index.tsx` of a component folder | Rendering only: takes data from the presenter or props        |
@@ -22,7 +21,6 @@ shown in full as the pattern for the others.
 src/
 ├── api/              # Model: HTTP client and API types (no React)
 ├── hooks/            # React hooks used by more than one component
-├── services/         # Shared tasks wired to the real api/ and stores/
 ├── stores/           # App-wide state: zustand stores that hold data only
 ├── tasks/            # Business tasks used by more than one component or hook
 ├── ui/               # App-wide UI primitives that know nothing about the domain
@@ -545,48 +543,23 @@ export function describeResults({ total, filtered, genre }: ResultsInput) {
 - Shared tasks are imported by presenters, local hooks, shared hooks, and
   other tasks. Views, `ui/`, and `api/` never import them.
 
-`findShowsPage` is a shared task. It declares the request function it needs
-as a type and never imports the API client:
-
-```ts
-// src/tasks/findShowsPage.ts
-import type { ShowsPage, ShowsPageRequest } from '~/api/types'
-
-/** Anything that can load a page of shows: the API client, a fake in tests. */
-export type FetchShowsPage = (
-  request: ShowsPageRequest,
-  signal?: AbortSignal,
-) => Promise<ShowsPage>
-
-export type FindShowsPageDeps = {
-  fetchPage: FetchShowsPage
-  signal?: AbortSignal
-}
-
-/** One page of shows for `request`, with blank parts normalised first. */
-export function findShowsPage(
-  { query, genre, page }: ShowsPageRequest,
-  { fetchPage, signal }: FindShowsPageDeps,
-): Promise<ShowsPage> {
-  const normalized = {
-    query: query.trim(),
-    genre: genre?.trim() || null,
-    page: Math.max(1, Math.floor(page)),
-  }
-  return fetchPage(normalized, signal)
-}
-```
-
-The local hook `useShowsPage` passes in the real client and keeps the React
-side (the `AbortController`, the loading and error state, retries):
+A task that only transforms data needs no dependencies at all. HomePage's
+`normalizeShowsRequest` is a pure function, and the local hook `useShowsPage`
+calls the API client with its result and keeps the React side (the
+`AbortController`, the loading and error state, retries):
 
 ```ts
 // src/pages/HomePage/logic/useShowsPage.ts (excerpt)
 import { fetchShowsPage } from '~/api/shows'
-import { findShowsPage } from '~/tasks/findShowsPage'
 
-findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
+import { normalizeShowsRequest } from './tasks/normalizeShowsRequest'
+
+fetchShowsPage(normalizeShowsRequest({ query, genre, page }), signal)
 ```
+
+Pass dependencies in when a task coordinates them (an API call plus a store
+update and a toast, as in `toggleFavorite`); don't wrap a single API call in a
+task just to pass it through.
 
 ## 7. Model layer: `api/` and `hooks/`
 
@@ -617,9 +590,9 @@ findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
 
 - `src/hooks/` holds reusable hooks that aren't tied to one view, like
   `useDebounce`. A hook used by one component lives in that component's
-  `logic/` folder instead (`HomePage/logic/useShowsPage.ts` runs the
-  `findShowsPage` task with the API client, an `AbortController`, and the
-  loading, error, and success states). Presenters use these hooks; views
+  `logic/` folder instead (`HomePage/logic/useShowsPage.ts` calls the
+  API client and keeps the `AbortController` and the loading, error, and
+  success states). Presenters use these hooks; views
   never import them. A shared hook
   may call tasks from `src/tasks/`, but never tasks from a component's
   `logic/tasks/`.
@@ -654,22 +627,26 @@ State that several components share (the favorites, the toast) lives in
   presenter depends on that hook, not on the store, and each hook reads only
   what its component shows, with `useStore`, so it re-renders only when that
   changes. A hook moves to `src/hooks/` only when a second component needs it.
-- **Writing** goes through a service (`src/services/`): plain functions that
-  call shared tasks with the real API and stores already passed in, wired once
-  for the whole app. A service isn't a hook, so presenters just call it, and
-  tests replace it with `vi.mock('…/services/favorites')`:
+- **Writing** goes through a hook too: it calls a shared task with the real
+  API and stores passed in and hands the presenter a plain function.
+  `HomePage/logic/useLoadFavorites()` loads the list when the page mounts;
+  `src/hooks/useToggleFavorite()` is shared because ShowCard and Favorites
+  both use it; `src/hooks/useNotify()` wires the toast for both. Presenter
+  tests replace the task with `vi.mock('~/tasks/toggleFavorite')`:
 
   ```ts
-  // src/services/favorites.ts (excerpt)
-  const deps = { api: favoritesApi, store: favoritesStore, notify }
-
-  export function toggleFavorite(show: Show): void {
-    void toggleFavoriteTask(show, deps)
-  }
+  // src/hooks/useToggleFavorite.ts (excerpt)
+  const notify = useNotify()
+  return useCallback(
+    (show: Show) => {
+      void toggleFavorite(show, { api: favoritesApi, store: favoritesStore, notify })
+    },
+    [notify],
+  )
   ```
 
-- A service holds no rules of its own: anything beyond passing dependencies
-  in is a task. Only presenters, local hooks and shared hooks call services.
+- Such a hook holds no rules of its own: anything beyond passing dependencies
+  in is a task.
 - A selector returns a primitive or a stored value, never a new object or
   array, or the component re-renders forever. Selection rules are tasks too:
   `useStore(favoritesStore, (state) => isFavorite(state, showId))`.
@@ -696,7 +673,6 @@ pages  →  components  →  ui
                          ▲
         tasks ───────────┘ (import type from stores/types only)
 
-  logic/usePresenter  →  services  →  api, stores, src/tasks
   logic/use*          →  api, stores   (local hooks, like shared ones)
 ```
 
@@ -705,11 +681,8 @@ pages  →  components  →  ui
 - `components/` never imports from `pages/`.
 - `api/` imports nothing from React or from the rest of the app.
 - `stores/` imports only `zustand/vanilla` and types from `api/types`. Only
-  hooks (shared or local) and services import a store; tasks import only
+  hooks (shared or local) import a store; tasks import only
   `stores/types`.
-- `services/` imports `api/`, `stores/` and `src/tasks/`, and nothing from
-  React, `hooks/`, components or `logic/`. Views, tasks, `ui/`, `api/` and
-  `stores/` never import a service.
 - Shared hooks (`src/hooks/`) may import shared tasks (`src/tasks/`).
 - Tasks (`logic/tasks/`, `src/tasks/`) import nothing from React, `hooks/`,
   views, presenters, or local hooks, and only types from `api/`.
@@ -830,7 +803,6 @@ config is in `biome.json`; a custom GritQL rule is in `biome-plugins/`.
 | `ui/` doesn't depend on app code                         | `style/noRestrictedImports`, override for `src/ui/**`                            |
 | `components/` never imports from `pages/`                | `style/noRestrictedImports`, override for `src/components/**`                    |
 | `api/` has no React or app imports                       | `style/noRestrictedImports`, override for `src/api/**`                           |
-| Services only wire tasks; nothing below them imports one | `style/noRestrictedImports`, override for `src/services/**` and the others       |
 | Stores hold data only; tasks get them as arguments       | `style/noRestrictedImports`, overrides for `src/stores/**` and `src/**/tasks/**` |
 
 Things to know when changing the config:

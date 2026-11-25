@@ -1,12 +1,12 @@
 import { renderHook } from '@testing-library/react'
 
 import type { Show } from '~/api/types'
-import { toggleFavorite } from '~/services/favorites'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { usePresenter } from './usePresenter'
 
-vi.mock('~/services/favorites')
+vi.mock('~/tasks/toggleFavorite')
 
 const show: Show = {
   id: 1,
@@ -47,7 +47,7 @@ describe('ShowCard usePresenter', () => {
 
     result.current.toggleFavorite()
 
-    expect(toggleFavorite).toHaveBeenCalledWith(show)
+    expect(toggleFavorite).toHaveBeenCalledWith(show, expect.anything())
   })
 
   it('keeps the same card while the show does not change', () => {

@@ -1,13 +1,11 @@
-import { useEffect } from 'react'
-
 import type { ShowsPage } from '~/api/types'
 import { useDebounce } from '~/hooks/useDebounce'
-import { loadFavorites } from '~/services/favorites'
 import { describeRange } from './tasks/describeRange'
 import { describeResults } from './tasks/describeResults'
 import { getHomeView } from './tasks/getHomeView'
 
 import { useBrowseState } from './useBrowseState'
+import { useLoadFavorites } from './useLoadFavorites'
 import { useSearchParam } from './useSearchParam'
 import { useShowsPage } from './useShowsPage'
 import { useToast } from './useToast'
@@ -47,11 +45,7 @@ export function usePresenter() {
   })
   const results = data ?? NO_RESULTS
   // The favorites live in a shared store; the page loads them once.
-  useEffect(() => {
-    const controller = new AbortController()
-    loadFavorites(controller.signal)
-    return () => controller.abort()
-  }, [])
+  useLoadFavorites()
 
   const view = getHomeView({
     hasQuery,

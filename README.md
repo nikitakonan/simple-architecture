@@ -54,7 +54,7 @@ src/
   index.css               # global styles (reset, root variables)
   api/                    # Model: API client (shows.ts) and types (no React)
   hooks/                  # shared non-UI hooks: useDebounce, useShowsPage
-  tasks/                  # shared business tasks (plain TS): findShowsPage
+  tasks/                  # shared business tasks (plain TS): toggleFavorite
   ui/                     # generic UI primitives with no domain knowledge (Chip)
   components/             # shared components that know the domain (ErrorState)
   pages/

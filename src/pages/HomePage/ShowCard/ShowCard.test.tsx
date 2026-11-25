@@ -2,12 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import type { Show } from '~/api/types'
-import { toggleFavorite } from '~/services/favorites'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { ShowCard } from '.'
 
-vi.mock('~/services/favorites')
+vi.mock('~/tasks/toggleFavorite')
 
 const show: Show = {
   id: 7,
@@ -49,6 +49,6 @@ describe('ShowCard', () => {
     })
     expect(star).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(star)
-    expect(toggleFavorite).toHaveBeenCalledWith(show)
+    expect(toggleFavorite).toHaveBeenCalledWith(show, expect.anything())
   })
 })

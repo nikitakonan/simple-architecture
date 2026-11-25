@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { fetchShowsPage } from '~/api/shows'
 import type { ShowsPage, ShowsPageRequest } from '~/api/types'
-import { findShowsPage } from '~/tasks/findShowsPage'
+import { normalizeShowsRequest } from './tasks/normalizeShowsRequest'
 
 export type SearchStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -37,7 +37,7 @@ export function useShowsPage({ query, genre, page }: ShowsPageRequest) {
     const { signal } = controller
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
 
-    findShowsPage({ query, genre, page }, { fetchPage: fetchShowsPage, signal })
+    fetchShowsPage(normalizeShowsRequest({ query, genre, page }), signal)
       .then((data) => {
         if (signal.aborted) return
         setState({ status: 'success', data, error: null })

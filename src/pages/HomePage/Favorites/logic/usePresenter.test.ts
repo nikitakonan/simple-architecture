@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
 
 import type { Show } from '~/api/types'
-import { toggleFavorite } from '~/services/favorites'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { usePresenter } from './usePresenter'
 
-vi.mock('~/services/favorites')
+vi.mock('~/tasks/toggleFavorite')
 
 const items = [{ id: 1, name: 'Lost' }] as Show[]
 
@@ -44,6 +44,9 @@ describe('Favorites usePresenter', () => {
     result.current.toggleById(1)
     result.current.toggleById(99)
 
-    expect(toggleFavorite).toHaveBeenCalledExactlyOnceWith(items[0])
+    expect(toggleFavorite).toHaveBeenCalledExactlyOnceWith(
+      items[0],
+      expect.anything(),
+    )
   })
 })

@@ -1,13 +1,13 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { toggleFavorite } from '~/services/favorites'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { renderWith, show } from './HomePage.testUtils'
 
 vi.mock('./logic/usePresenter')
-vi.mock('~/services/favorites')
+vi.mock('~/tasks/toggleFavorite')
 
 describe('HomePage favorites', () => {
   it('shows the favorites count, card stars and the toast', async () => {
@@ -25,6 +25,6 @@ describe('HomePage favorites', () => {
     })
     expect(star).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(star)
-    expect(toggleFavorite).toHaveBeenCalledWith(show)
+    expect(toggleFavorite).toHaveBeenCalledWith(show, expect.anything())
   })
 })
