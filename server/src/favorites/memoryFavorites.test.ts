@@ -9,7 +9,7 @@ const ids = (shows: Show[]) => shows.map((s) => s.id)
 
 describe('createMemoryFavorites', () => {
   it('adds, lists and removes shows by id', async () => {
-    const favorites = createMemoryFavorites()
+    const favorites = createMemoryFavorites().forUser('ann@example.com')
 
     await favorites.add(show(2))
     await favorites.add(show(1))
@@ -23,8 +23,20 @@ describe('createMemoryFavorites', () => {
     expect(ids(await favorites.list())).toEqual([2])
   })
 
+  it('keeps a separate list for every user', async () => {
+    const db = createMemoryFavorites()
+    await db.forUser('ann@example.com').add(show(1))
+    await db.forUser('bob@example.com').add(show(2))
+    await db.forUser('bob@example.com').remove(1)
+
+    expect(ids(await db.forUser('ann@example.com').list())).toEqual([1])
+    expect(ids(await db.forUser('bob@example.com').list())).toEqual([2])
+    await expect(db.forUser('eve@example.com').list()).resolves.toEqual([])
+    await expect(db.forUser('eve@example.com').has(1)).resolves.toBe(false)
+  })
+
   it('stores copies, like a database would', async () => {
-    const favorites = createMemoryFavorites()
+    const favorites = createMemoryFavorites().forUser('ann@example.com')
     const original = show(1)
     await favorites.add(original)
 
@@ -36,8 +48,10 @@ describe('createMemoryFavorites', () => {
   })
 
   it('keeps every store separate', async () => {
-    await createMemoryFavorites().add(show(1))
+    await createMemoryFavorites().forUser('ann@example.com').add(show(1))
 
-    await expect(createMemoryFavorites().list()).resolves.toEqual([])
+    await expect(
+      createMemoryFavorites().forUser('ann@example.com').list(),
+    ).resolves.toEqual([])
   })
 })

@@ -22,7 +22,7 @@ export function HomePage() {
   return (
     <div className={styles.page}>
       <Header>
-        <Favorites />
+        {presenter.isSignedIn && <Favorites />}
         <UserMenu />
       </Header>
       <main className={styles.main}>

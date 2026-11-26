@@ -1,20 +1,31 @@
 import { Hono } from 'hono'
+import { getCookie } from 'hono/cookie'
 
 import { addFavorite, type LookupShow } from './tasks/addFavorite'
-import { type FavoritesStore, listFavorites } from './tasks/listFavorites'
+import { findSession } from './tasks/findSession'
+import { type FavoritesDb, listFavorites } from './tasks/listFavorites'
 import { parseShowId } from './tasks/parseShowId'
 import { removeFavorite } from './tasks/removeFavorite'
+import type { SessionStore } from './tasks/startSession'
 
-import type { ApiError, Favorites } from './contract'
+import { SESSION_COOKIE } from './authRoutes'
+import type { ApiError, Favorites, User } from './contract'
 
 export type FavoritesDeps = {
-  favorites: FavoritesStore
+  favorites: FavoritesDb
   lookupShow: LookupShow
+  sessions: SessionStore
+  now: () => number
 }
 
-/** `/favorites`: list, add and remove favorite shows. HTTP only. */
-export function favoritesRoutes({ favorites, lookupShow }: FavoritesDeps) {
-  const routes = new Hono()
+/** `/favorites`: the signed-in user's own favorite shows. HTTP only. */
+export function favoritesRoutes({
+  favorites,
+  lookupShow,
+  sessions,
+  now,
+}: FavoritesDeps) {
+  const routes = new Hono<{ Variables: { user: User } }>()
 
   // The list changes with every PUT/DELETE, so never reuse a stored copy.
   routes.use('*', async (c, next) => {
@@ -22,8 +33,20 @@ export function favoritesRoutes({ favorites, lookupShow }: FavoritesDeps) {
     c.header('Cache-Control', 'no-store')
   })
 
+  // Favorites belong to a user, so a guest gets none.
+  routes.use('*', async (c, next) => {
+    const id = getCookie(c, SESSION_COOKIE)
+    const user = await findSession(id, { sessions, now })
+    if (!user) {
+      const body = { error: 'Sign in to use favorites.' }
+      return c.json(body satisfies ApiError, 401)
+    }
+    c.set('user', user)
+    await next()
+  })
+
   routes.get('/', async (c) => {
-    const body = await listFavorites(favorites)
+    const body = await listFavorites(favorites.forUser(c.var.user.email))
     return c.json(body satisfies Favorites)
   })
 
@@ -33,7 +56,7 @@ export function favoritesRoutes({ favorites, lookupShow }: FavoritesDeps) {
 
     try {
       const result = await addFavorite(id.value, {
-        store: favorites,
+        store: favorites.forUser(c.var.user.email),
         lookupShow,
         signal: c.req.raw.signal,
       })
@@ -52,8 +75,8 @@ export function favoritesRoutes({ favorites, lookupShow }: FavoritesDeps) {
   routes.delete('/:id', async (c) => {
     const id = parseShowId(c.req.param('id'))
     if (!id.ok) return c.json({ error: id.error } satisfies ApiError, 400)
-    const body = await removeFavorite(id.value, favorites)
-    return c.json(body satisfies Favorites)
+    const store = favorites.forUser(c.var.user.email)
+    return c.json((await removeFavorite(id.value, store)) satisfies Favorites)
   })
 
   return routes

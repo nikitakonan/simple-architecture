@@ -8,6 +8,11 @@ export type FavoritesStore = {
   remove: (id: number) => Promise<void>
 }
 
+/** The favorites of every user: `forUser(email)` is that user's own list. */
+export type FavoritesDb = {
+  forUser: (email: string) => FavoritesStore
+}
+
 /** The favorite shows, sorted by name so the list reads like a shelf. */
 export async function listFavorites(store: FavoritesStore): Promise<Favorites> {
   const items = await store.list()

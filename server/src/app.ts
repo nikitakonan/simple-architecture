@@ -36,7 +36,9 @@ export function createApp({
   search,
   favorites,
   lookupShow,
-  ...authDeps
+  sessions,
+  now,
+  newId,
 }: AppDeps) {
   const app = new Hono<{ Bindings: Env }>()
 
@@ -77,8 +79,11 @@ export function createApp({
     }
   })
 
-  app.route('/favorites', favoritesRoutes({ favorites, lookupShow }))
-  app.route('/auth', authRoutes(authDeps))
+  app.route(
+    '/favorites',
+    favoritesRoutes({ favorites, lookupShow, sessions, now }),
+  )
+  app.route('/auth', authRoutes({ sessions, now, newId }))
 
   app.notFound((c) => c.json({ error: 'Not found.' } satisfies ApiError, 404))
 

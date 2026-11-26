@@ -8,7 +8,7 @@ const ENV = { ALLOWED_ORIGINS: 'http://localhost:5173' }
 function setup() {
   const app = createApp({
     search: vi.fn(),
-    favorites: { list: vi.fn(), has: vi.fn(), add: vi.fn(), remove: vi.fn() },
+    favorites: { forUser: vi.fn() },
     lookupShow: vi.fn(),
     ...AUTH_DEPS,
   })

@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 
 import type { Show } from '~/api/types'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { sessionStore } from '~/stores/sessionStore'
 import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { usePresenter } from './usePresenter'
@@ -25,6 +26,7 @@ const props = { show }
 describe('ShowCard usePresenter', () => {
   beforeEach(() => {
     favoritesStore.setState({ items: [show] })
+    sessionStore.setState({ status: 'ready', user: { email: 'a@b.co' } })
   })
 
   it('returns the show formatted for the card', () => {
@@ -40,6 +42,14 @@ describe('ShowCard usePresenter', () => {
       'Favorite The Office (2005 · Peacock)',
     )
     expect(result.current.isFavorite).toBe(true)
+    expect(result.current.canFavorite).toBe(true)
+  })
+
+  it('offers no favorite to a guest', () => {
+    sessionStore.setState({ user: null })
+    const { result } = renderHook(() => usePresenter(props))
+
+    expect(result.current.canFavorite).toBe(false)
   })
 
   it('toggles this show as a favorite', () => {

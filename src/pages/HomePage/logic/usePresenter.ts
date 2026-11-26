@@ -1,5 +1,6 @@
 import type { ShowsPage } from '~/api/types'
 import { useDebounce } from '~/hooks/useDebounce'
+import { useSignedInEmail } from '~/hooks/useSignedInEmail'
 import { describeRange } from './tasks/describeRange'
 import { describeResults } from './tasks/describeResults'
 import { getHomeView } from './tasks/getHomeView'
@@ -44,8 +45,9 @@ export function usePresenter() {
     page,
   })
   const results = data ?? NO_RESULTS
-  // The favorites live in a shared store; the page loads them once.
-  useLoadFavorites()
+  // The favorites live in a shared store, loaded for whoever is signed in.
+  const email = useSignedInEmail()
+  useLoadFavorites(email)
 
   const view = getHomeView({
     hasQuery,
@@ -86,6 +88,8 @@ export function usePresenter() {
       pageItemCount: results.items.length,
       total: results.matchCount,
     }),
+    // Only a signed-in user has favorites to open.
+    isSignedIn: email !== null,
     toast: useToast(),
   }
 }

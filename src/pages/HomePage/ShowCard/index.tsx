@@ -23,14 +23,16 @@ export function ShowCard(props: ShowCardProps) {
           </span>
         )}
         {card.status && <span className={styles.status}>{card.status}</span>}
-        <span className={styles.favorite}>
-          <StarButton
-            label={favorite.favoriteLabel}
-            pressed={favorite.isFavorite}
-            busy={favorite.isSavingFavorite}
-            onClick={favorite.toggleFavorite}
-          />
-        </span>
+        {favorite.canFavorite && (
+          <span className={styles.favorite}>
+            <StarButton
+              label={favorite.favoriteLabel}
+              pressed={favorite.isFavorite}
+              busy={favorite.isSavingFavorite}
+              onClick={favorite.toggleFavorite}
+            />
+          </span>
+        )}
       </div>
       <div className={styles.heading}>
         <h2 className={styles.name}>{card.name}</h2>

@@ -21,6 +21,7 @@ describe('favorites API', () => {
 
     await expect(fetchFavorites(signal)).resolves.toEqual(FAVORITES)
     expect(fetchMock).toHaveBeenCalledWith('https://api.test/favorites', {
+      credentials: 'include',
       signal,
     })
   })
@@ -30,8 +31,14 @@ describe('favorites API', () => {
     await removeFavorite(7)
 
     expect(fetchMock.mock.calls).toEqual([
-      ['https://api.test/favorites/7', { method: 'PUT' }],
-      ['https://api.test/favorites/7', { method: 'DELETE' }],
+      [
+        'https://api.test/favorites/7',
+        { credentials: 'include', method: 'PUT' },
+      ],
+      [
+        'https://api.test/favorites/7',
+        { credentials: 'include', method: 'DELETE' },
+      ],
     ])
   })
 

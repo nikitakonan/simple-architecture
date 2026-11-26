@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 
 import * as favoritesApi from '~/api/favorites'
 import type { Show } from '~/api/types'
+import { useSignedInEmail } from '~/hooks/useSignedInEmail'
 import { getFavoriteLabel } from '~/tasks/getFavoriteLabel'
 import { toggleFavorite } from '~/tasks/toggleFavorite'
 import { formatShow } from './tasks/formatShow'
@@ -19,6 +20,8 @@ export function usePresenter({ show }: ShowCardProps) {
 
   return {
     card,
+    // Favorites belong to a user, so a guest gets no star.
+    canFavorite: useSignedInEmail() !== null,
     favoriteLabel: getFavoriteLabel(card),
     isFavorite,
     isSavingFavorite: isSaving,

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 
 import type { Show } from '~/api/types'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { sessionStore } from '~/stores/sessionStore'
 import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { ShowCard } from '.'
@@ -21,8 +22,9 @@ const show: Show = {
   summary: '<p>A writer solves <b>murders</b>.</p>',
 }
 
-function renderCard(isFavorite = false) {
+function renderCard(isFavorite = false, email: string | null = 'a@b.co') {
   favoritesStore.setState({ items: isFavorite ? [show] : [] })
+  sessionStore.setState({ status: 'ready', user: email ? { email } : null })
   render(<ShowCard show={show} />)
 }
 
@@ -50,5 +52,11 @@ describe('ShowCard', () => {
     expect(star).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(star)
     expect(toggleFavorite).toHaveBeenCalledWith(show, expect.anything())
+  })
+
+  it('has no star for a guest', () => {
+    renderCard(false, null)
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

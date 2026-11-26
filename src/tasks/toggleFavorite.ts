@@ -1,5 +1,6 @@
 import type { Show } from '~/api/types'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { sessionStore } from '~/stores/sessionStore'
 
 import { applyFavorites } from './applyFavorites'
 import { describeFavoriteChange } from './describeFavoriteChange'
@@ -9,16 +10,22 @@ import { type FavoritesApi, saveFavorite } from './saveFavorite'
 import { showToast } from './showToast'
 
 export const SAVE_FAVORITE_ERROR = 'Couldn’t update your favorites. Try again.'
+export const SIGN_IN_TO_SAVE = 'Sign in to save shows to your favorites.'
 
 /**
  * Adds the show to the favorites or removes it, stores the list the server
  * answers with and tells the user. One request per show at a time, so double
- * clicks can't race.
+ * clicks can't race. Favorites belong to a user, so a guest is asked to sign
+ * in instead.
  */
 export async function toggleFavorite(
   show: Show,
   api: FavoritesApi,
 ): Promise<void> {
+  if (!sessionStore.getState().user) {
+    showToast(SIGN_IN_TO_SAVE)
+    return
+  }
   const state = favoritesStore.getState()
   if (isSavingFavorite(state, show.id)) return
   const favorite = !isFavorite(state, show.id)

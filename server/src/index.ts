@@ -18,7 +18,7 @@ const cache = createMemoryCache<TvmazeSearchResult[]>({
 
 export default createApp({
   search: cacheSearch(searchTvmaze, cache),
-  // One list for everyone, in memory: it is lost when the instance restarts.
+  // A list per user, in memory: it is lost when the instance restarts.
   favorites: createMemoryFavorites(),
   lookupShow: lookupTvmazeShow,
   // Also in memory: a restart signs everyone out.

@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { favoritesStore } from '~/stores/favoritesStore'
+import { sessionStore } from '~/stores/sessionStore'
 import { toggleFavorite } from '~/tasks/toggleFavorite'
 
 import { renderWith, show } from './HomePage.testUtils'
@@ -12,6 +13,7 @@ vi.mock('~/tasks/toggleFavorite')
 describe('HomePage favorites', () => {
   it('shows the favorites count, card stars and the toast', async () => {
     favoritesStore.setState({ items: [show] })
+    sessionStore.setState({ status: 'ready', user: { email: 'a@b.co' } })
     renderWith({
       view: 'results',
       visibleShows: [show],
@@ -26,5 +28,13 @@ describe('HomePage favorites', () => {
     expect(star).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(star)
     expect(toggleFavorite).toHaveBeenCalledWith(show, expect.anything())
+  })
+
+  it('hides the favorites button from a guest', () => {
+    renderWith({ isSignedIn: false })
+
+    expect(
+      screen.queryByRole('button', { name: /Favorites/ }),
+    ).not.toBeInTheDocument()
   })
 })

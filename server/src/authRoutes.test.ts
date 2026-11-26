@@ -13,7 +13,7 @@ function setup() {
   let ids = 0
   const app = createApp({
     search: vi.fn(),
-    favorites: { list: vi.fn(), has: vi.fn(), add: vi.fn(), remove: vi.fn() },
+    favorites: { forUser: vi.fn() },
     lookupShow: vi.fn(),
     sessions: createMemorySessions(),
     now: () => time,

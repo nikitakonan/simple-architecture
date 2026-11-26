@@ -44,6 +44,7 @@ export const base: Presenter = {
   pageCount: 1,
   setPage: vi.fn(),
   rangeLabel: '',
+  isSignedIn: true,
   toast: null,
 }
 

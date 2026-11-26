@@ -1,38 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createApp } from './app'
-import { AUTH_DEPS } from './authRoutes.testUtils'
 import type { Favorites } from './contract'
-import { createMemoryFavorites } from './favorites/memoryFavorites'
-import type { TvmazeShow } from './tvmaze/types'
-
-const ENV = { ALLOWED_ORIGINS: 'http://localhost:5173' }
-
-function tvmazeShow(id: number, name: string) {
-  return { id, name, genres: [] } as unknown as TvmazeShow
-}
-
-function setup(lookupShow = vi.fn(async (id: number) => tvmazeShow(id, 'X'))) {
-  const app = createApp({
-    search: vi.fn(),
-    favorites: createMemoryFavorites(),
-    lookupShow,
-    ...AUTH_DEPS,
-  })
-  const call = (method: string, path: string, headers?: HeadersInit) =>
-    app.request(path, { method, headers }, ENV)
-  return { call, lookupShow }
-}
+import {
+  ORIGIN,
+  setup,
+  signedIn,
+  tvmazeShow,
+} from './favoritesRoutes.testUtils'
 
 const names = async (response: Response) =>
   ((await response.json()) as Favorites).items.map((show) => show.name)
 
 describe('/favorites', () => {
   it('adds, lists and removes favorites', async () => {
-    const lookupShow = vi.fn(async (id: number) =>
-      tvmazeShow(id, id === 1 ? 'Lost' : 'Fargo'),
+    const { call } = await signedIn(
+      vi.fn(async (id: number) => tvmazeShow(id, id === 1 ? 'Lost' : 'Fargo')),
     )
-    const { call } = setup(lookupShow)
 
     expect(await names(await call('PUT', '/favorites/1'))).toEqual(['Lost'])
     const added = await call('PUT', '/favorites/2')
@@ -45,8 +28,44 @@ describe('/favorites', () => {
     expect(await names(await call('DELETE', '/favorites/2'))).toEqual(['Lost'])
   })
 
+  it('refuses a guest', async () => {
+    const { request, lookupShow } = setup()
+
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      const path = method === 'GET' ? '/favorites' : '/favorites/1'
+      const response = await request(method, path, { Origin: ORIGIN })
+      expect(response.status).toBe(401)
+      await expect(response.json()).resolves.toEqual({
+        error: 'Sign in to use favorites.',
+      })
+    }
+    expect(lookupShow).not.toHaveBeenCalled()
+  })
+
+  it('keeps a separate list for every user', async () => {
+    const { logIn, as } = setup()
+    const ann = as(await logIn('ann@example.com'))
+    const bob = as(await logIn('bob@example.com'))
+
+    await ann('PUT', '/favorites/1')
+
+    expect(await names(await bob('GET', '/favorites'))).toEqual([])
+    expect(await names(await ann('GET', '/favorites'))).toEqual(['X'])
+  })
+
+  it('gives the same list back after logging out and in again', async () => {
+    const { logIn, logOut, as } = setup()
+    const first = await logIn('ann@example.com')
+    await as(first)('PUT', '/favorites/1')
+    await logOut(first)
+
+    expect((await as(first)('GET', '/favorites')).status).toBe(401)
+    const again = as(await logIn('Ann@Example.com'))
+    expect(await names(await again('GET', '/favorites'))).toEqual(['X'])
+  })
+
   it('rejects an invalid id', async () => {
-    const { call, lookupShow } = setup()
+    const { call, lookupShow } = await signedIn()
 
     const response = await call('PUT', '/favorites/abc')
 
@@ -55,7 +74,7 @@ describe('/favorites', () => {
   })
 
   it('answers 404 for a show TVmaze does not know', async () => {
-    const { call } = setup(vi.fn().mockResolvedValue(null))
+    const { call } = await signedIn(vi.fn().mockResolvedValue(null))
 
     const response = await call('PUT', '/favorites/9')
 
@@ -67,16 +86,16 @@ describe('/favorites', () => {
 
   it('answers 502 when TVmaze fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { call } = setup(vi.fn().mockRejectedValue(new Error('down')))
+    const { call } = await signedIn(vi.fn().mockRejectedValue(new Error('x')))
 
     expect((await call('PUT', '/favorites/9')).status).toBe(502)
   })
 
   it('allows PUT and DELETE from the configured origins', async () => {
-    const { call } = setup()
+    const { request } = setup()
 
-    const response = await call('OPTIONS', '/favorites/1', {
-      Origin: 'http://localhost:5173',
+    const response = await request('OPTIONS', '/favorites/1', {
+      Origin: ORIGIN,
       'Access-Control-Request-Method': 'PUT',
     })
 

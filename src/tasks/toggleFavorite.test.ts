@@ -1,14 +1,20 @@
 import type { Show } from '~/api/types'
 import { favoritesStore } from '~/stores/favoritesStore'
+import { sessionStore } from '~/stores/sessionStore'
 import { toastStore } from '~/stores/toastStore'
 
-import { SAVE_FAVORITE_ERROR, toggleFavorite } from './toggleFavorite'
+import {
+  SAVE_FAVORITE_ERROR,
+  SIGN_IN_TO_SAVE,
+  toggleFavorite,
+} from './toggleFavorite'
 
 const lost = { id: 1, name: 'Lost' } as Show
 const fargo = { id: 2, name: 'Fargo' } as Show
 
 function setup(items: Show[] = [lost]) {
   favoritesStore.setState({ items })
+  sessionStore.setState({ status: 'ready', user: { email: 'ann@example.com' } })
   return { addFavorite: vi.fn(), removeFavorite: vi.fn() }
 }
 
@@ -49,6 +55,17 @@ describe('toggleFavorite', () => {
     expect(favoritesStore.getState().items).toEqual([lost])
     expect(favoritesStore.getState().savingIds).toEqual([])
     expect(toastText()).toBe(SAVE_FAVORITE_ERROR)
+  })
+
+  it('asks a guest to sign in instead of saving', async () => {
+    const api = setup()
+    sessionStore.setState({ user: null })
+
+    await toggleFavorite(fargo, api)
+
+    expect(api.addFavorite).not.toHaveBeenCalled()
+    expect(favoritesStore.getState().savingIds).toEqual([])
+    expect(toastText()).toBe(SIGN_IN_TO_SAVE)
   })
 
   it('ignores a second click while the show is saving', async () => {
