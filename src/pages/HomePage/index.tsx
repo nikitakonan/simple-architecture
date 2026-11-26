@@ -11,6 +11,7 @@ import { usePresenter } from './logic/usePresenter'
 import { Pagination } from './Pagination'
 import { SearchField } from './SearchField'
 import { ShowCard } from './ShowCard'
+import { UserMenu } from './UserMenu'
 
 import styles from './HomePage.module.css'
 
@@ -22,6 +23,7 @@ export function HomePage() {
     <div className={styles.page}>
       <Header>
         <Favorites />
+        <UserMenu />
       </Header>
       <main className={styles.main}>
         <SearchField

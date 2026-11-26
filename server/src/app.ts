@@ -4,17 +4,20 @@ import { cors } from 'hono/cors'
 import { browseShows, type SearchShows } from './tasks/browseShows'
 import { parseShowsQuery } from './tasks/parseShowsQuery'
 
+import { type AuthDeps, authRoutes } from './authRoutes'
 import type { ApiError, ShowsPage } from './contract'
 import { type FavoritesDeps, favoritesRoutes } from './favoritesRoutes'
+import { originGuard } from './originGuard'
 
 export type Env = {
   /** Comma-separated origins allowed to call the API from a browser. */
   ALLOWED_ORIGINS?: string
 }
 
-export type AppDeps = FavoritesDeps & {
-  search: SearchShows
-}
+export type AppDeps = FavoritesDeps &
+  AuthDeps & {
+    search: SearchShows
+  }
 
 export const PAGE_SIZE = 3
 
@@ -29,7 +32,12 @@ function parseOrigins(value = ''): string[] {
 }
 
 /** The HTTP layer: routing, CORS, validation and status codes. */
-export function createApp({ search, ...favoritesDeps }: AppDeps) {
+export function createApp({
+  search,
+  favorites,
+  lookupShow,
+  ...authDeps
+}: AppDeps) {
   const app = new Hono<{ Bindings: Env }>()
 
   app.use(
@@ -37,8 +45,15 @@ export function createApp({ search, ...favoritesDeps }: AppDeps) {
     cors({
       origin: (origin, c) =>
         parseOrigins(c.env?.ALLOWED_ORIGINS).includes(origin) ? origin : null,
-      allowMethods: ['GET', 'PUT', 'DELETE'],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowHeaders: ['Content-Type'],
+      // Lets the browser send and store the session cookie (see authRoutes).
+      credentials: true,
     }),
+  )
+  app.use(
+    '*',
+    originGuard<{ Bindings: Env }>((c) => parseOrigins(c.env?.ALLOWED_ORIGINS)),
   )
 
   app.get('/shows', async (c) => {
@@ -62,7 +77,8 @@ export function createApp({ search, ...favoritesDeps }: AppDeps) {
     }
   })
 
-  app.route('/favorites', favoritesRoutes(favoritesDeps))
+  app.route('/favorites', favoritesRoutes({ favorites, lookupShow }))
+  app.route('/auth', authRoutes(authDeps))
 
   app.notFound((c) => c.json({ error: 'Not found.' } satisfies ApiError, 404))
 

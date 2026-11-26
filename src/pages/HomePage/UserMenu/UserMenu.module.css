@@ -1,0 +1,44 @@
+.user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.email {
+  max-width: 220px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signIn,
+.logOut {
+  height: var(--control-size);
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.signIn {
+  border: 0;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.logOut {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.logOut:hover {
+  border-color: var(--color-text-muted);
+}
+
+.logOut:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

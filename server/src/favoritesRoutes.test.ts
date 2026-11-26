@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createApp } from './app'
+import { AUTH_DEPS } from './authRoutes.testUtils'
 import type { Favorites } from './contract'
 import { createMemoryFavorites } from './favorites/memoryFavorites'
 import type { TvmazeShow } from './tvmaze/types'
@@ -16,6 +17,7 @@ function setup(lookupShow = vi.fn(async (id: number) => tvmazeShow(id, 'X'))) {
     search: vi.fn(),
     favorites: createMemoryFavorites(),
     lookupShow,
+    ...AUTH_DEPS,
   })
   const call = (method: string, path: string, headers?: HeadersInit) =>
     app.request(path, { method, headers }, ENV)

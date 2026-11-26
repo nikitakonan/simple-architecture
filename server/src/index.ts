@@ -3,6 +3,7 @@ import { cacheSearch } from './tasks/cacheSearch'
 import { createApp } from './app'
 import { createMemoryCache } from './cache/memoryCache'
 import { createMemoryFavorites } from './favorites/memoryFavorites'
+import { createMemorySessions } from './sessions/memorySessions'
 import { lookupTvmazeShow, searchTvmaze } from './tvmaze/client'
 import type { TvmazeSearchResult } from './tvmaze/types'
 
@@ -20,4 +21,8 @@ export default createApp({
   // One list for everyone, in memory: it is lost when the instance restarts.
   favorites: createMemoryFavorites(),
   lookupShow: lookupTvmazeShow,
+  // Also in memory: a restart signs everyone out.
+  sessions: createMemorySessions(),
+  now: Date.now,
+  newId: () => crypto.randomUUID(),
 })

@@ -249,6 +249,9 @@
                       "../cache/**",
                       "../favorites/**",
                       "../favoritesRoutes",
+                      "../sessions/**",
+                      "../authRoutes",
+                      "../originGuard",
                       "../index"
                     ],
                     "message": "Tasks get their dependencies as arguments."

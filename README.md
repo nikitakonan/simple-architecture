@@ -8,6 +8,7 @@ A small React app for searching and browsing TV shows with the public [TVmaze AP
 - [x] **Pagination:** results are shown 3 per page, with controls to move between pages. The server returns one page at a time.
 - [x] **Genre filter:** the unique genres from the current results are shown as clickable chips above the list, with a count for each. Selecting one shows only the shows in that genre, and the filter can be reset. The server filters, and pagination applies to the filtered list.
 - [x] **UX:** input is debounced instead of sending a request per keystroke, outdated requests (a new query, genre or page) are cancelled with `AbortController`, and loading, error (with a retry button) and empty states are handled. While the next search, genre or page loads, the previous results stay on screen.
+- [x] **Sign-in:** a separate login page with a single email field (no password, sign-up or recovery). The API server starts a session and keeps its id in an `HttpOnly` cookie. The header shows the signed-in email and a "Log out" button. Search works without signing in.
 - [x] **Stretch goal:** data fetching is written by hand, without `useQuery`.
 
 ## Tech stack
@@ -50,7 +51,8 @@ The code follows a Model–View–Presenter split. The full rules are in [archit
 
 ```
 src/
-  main.tsx                # entry point, renders HomePage
+  main.tsx                # entry point, renders App
+  App/                    # app shell: checks the session, shows HomePage or LoginPage
   index.css               # global styles (reset, root variables)
   api/                    # Model: API client (shows.ts) and types (no React)
   hooks/                  # shared non-UI hooks: useDebounce, useShowsPage
@@ -78,6 +80,8 @@ src/
       EmptyState/
       GenreFilter/
       ShowCard/           # logic/usePresenter.ts + logic/tasks/formatShow.ts
+      UserMenu/           # "Sign in", or the email and "Log out"
+    LoginPage/            # the email form; logic/tasks/logIn.ts
       Pagination/         # logic/usePresenter.ts (page buttons state)
   test/
     setup.ts              # Vitest setup: jest-dom matchers, cleanup
@@ -120,3 +124,9 @@ Pushing changes under `server/` to `main` deploys the Worker through `.github/wo
 - Styling uses CSS Modules only. Only resets and root variables go in global CSS.
 - Tests sit next to the code they test, as `*.test.ts(x)`.
 - Code style and most architecture rules are enforced by Biome (`npm run check`): 2-space indent, single quotes, no semicolons and trailing commas.
+
+## Sign-in and the session cookie
+
+`POST /auth/login` (`{ email }`) starts a session on the server and sets `__Host-sid=<random id>; HttpOnly; Secure; SameSite=None; Partitioned`. `GET /auth/session` returns `{ user }` (`null` for a guest), and `POST /auth/logout` ends the session and clears the cookie. Sessions last 7 days and live in Worker memory (`server/src/sessions/memorySessions.ts`), so a restart signs everyone out.
+
+The app (GitHub Pages) and the API (workers.dev) are different sites, so the cookie is a third-party one: it needs `SameSite=None; Secure`, every auth request is sent with `credentials: 'include'`, and the API answers with `Access-Control-Allow-Credentials`. `Partitioned` (CHIPS) keeps it working in Chrome and Firefox, which block unpartitioned third-party cookies. **Safari blocks third-party cookies altogether, so there sign-in doesn't persist** until the app and the API share a site (for example by serving the app from the Worker). Because the cookie goes with cross-site requests, the API refuses `POST`/`PUT`/`DELETE` from any origin not in `ALLOWED_ORIGINS` (`server/src/originGuard.ts`).

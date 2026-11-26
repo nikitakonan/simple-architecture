@@ -62,3 +62,21 @@ export type Favorites = {
 export type ApiError = {
   error: string
 }
+
+/** The signed-in user. Sign-in needs only an email: no password. */
+export type User = {
+  email: string
+}
+
+/**
+ * `GET /auth/session`, `POST /auth/login` and `POST /auth/logout` all answer
+ * with the current session: `user` is `null` for a guest.
+ */
+export type AuthSession = {
+  user: User | null
+}
+
+/** Body of `POST /auth/login`. */
+export type LoginRequest = {
+  email: string
+}
